@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package all_services;
+
+option go_package = "./protobuf";
+// User Service
+service UserService {
+    rpc RegisterUser (RegisterUserRequest) returns (UserResponse);
+    rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthResponse);
+    rpc GetUser (GetUserRequest) returns (UserResponse);
+}
+
+message RegisterUserRequest {
+    string username = 1;
+    string email = 2;
+    string password = 3;
+    int32 userid=4;
+}
+
+message AuthenticateUserRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message GetUserRequest {
+    int32 user_id = 1;
+}
+
+message UserResponse {
+    int32 user_id = 1;
+    string username = 2;
+    string email = 3;
+}
+
+message AuthResponse {
+    string token = 1;
+}
+
+// Product Service
+service ProductService {
+    rpc CreateProduct (ProductRequest) returns (ProductResponse);
+    rpc GetProduct (ProductIDRequest) returns (ProductResponse);
+    rpc ListProducts (Empty) returns (ProductListResponse);
+    rpc UpdateProduct (ProductRequest) returns (ProductResponse);
+    rpc DeleteProduct (ProductIDRequest) returns (Empty);
+}
+
+message ProductRequest {
+    int32 product_id = 1;
+    string name = 2;
+    string description = 3;
+    float price = 4;
+}
+
+message ProductIDRequest {
+    int32 product_id = 1;
+}
+
+message ProductResponse {
+    int32 product_id = 1;
+    string name = 2;
+    string description = 3;
+    float price = 4;
+}
+
+message ProductListResponse {
+    repeated ProductResponse products = 1;
+}
+
+message Empty {}
+
+// Inventory Service
+service InventoryService {
+    rpc TrackStock (StockRequest) returns (StockResponse);
+    rpc UpdateStock (StockUpdateRequest) returns (StockResponse);
+    rpc GetStock (StockRequest) returns (StockResponse);
+}
+
+message StockRequest {
+    int32 product_id = 1;
+}
+
+message StockUpdateRequest {
+    int32 product_id = 1;
+    int32 quantity = 2;
+}
+
+message StockResponse {
+    int32 product_id = 1;
+    int32 quantity = 2;
+    string status = 3;
+}
+
+// Order Service
+service OrderService {
+    rpc CreateOrder (OrderRequest) returns (OrderResponse);
+    rpc GetOrder (OrderIDRequest) returns (OrderResponse);
+    rpc ListOrders (Empty) returns (OrderListResponse);
+    rpc UpdateOrder (OrderRequest) returns (OrderResponse);
+    rpc DeleteOrder (OrderIDRequest) returns (Empty);
+}
+
+message OrderRequest {
+    int32 order_id = 1;
+    int32 user_id = 2;
+    repeated OrderItem items = 3;
+    float total_amount = 4;
+}
+
+message OrderIDRequest {
+    int32 order_id = 1;
+}
+
+message OrderResponse {
+    int32 order_id = 1;
+    int32 user_id = 2;
+    repeated OrderItem items = 3;
+    float total_amount = 4;
+}
+
+message OrderItem {
+    int32 product_id = 1;
+    int32 quantity = 2;
+    float price = 3;
+}
+
+message OrderListResponse {
+    repeated OrderResponse orders = 1;
+}
+
+// Payment Service
+service PaymentService {
+    rpc ProcessPayment (PaymentRequest) returns (PaymentResponse);
+}
+
+message PaymentRequest {
+    int32 order_id = 1;
+    float amount = 2;
+    string method = 3;
+}
+
+message PaymentResponse {
+    int32 payment_id = 1;
+    int32 order_id = 2;
+    float amount = 3;
+    string status = 4;
+}
+
+// Notification Service
+service NotificationService {
+    rpc SendNotification (NotificationRequest) returns (NotificationResponse);
+}
+
+message NotificationRequest {
+    int32 user_id = 1;
+    string message = 2;
+}
+
+message NotificationResponse {
+    string status = 1;
+}
+
+// Audit & Logging Service
+service AuditService {
+    rpc LogEvent (LogRequest) returns (LogResponse);
+    rpc GetLogs (LogRequest) returns (LogListResponse);
+}
+
+message LogRequest {
+    string event = 1;
+    string description = 2;
+}
+
+message LogResponse {
+    string status = 1;
+}
+
+message LogListResponse {
+    repeated LogRequest logs = 1;
+}
+
+// Order Tracking & Search Service
+service OrderTrackingService {
+    rpc TrackOrder (OrderTrackingRequest) returns (OrderTrackingResponse);
+    rpc SearchOrders (OrderSearchRequest) returns (OrderSearchResponse);
+}
+
+message OrderTrackingRequest {
+    int32 order_id = 1;
+}
+
+message OrderTrackingResponse {
+    int32 order_id = 1;
+    repeated OrderEvent events = 2;
+}
+
+message OrderEvent {
+    string event = 1;
+}
+
+message OrderSearchRequest {
+    int32 user_id = 1;
+    int32 product_id = 2;
+    string status = 5;
+}
+
+message OrderSearchResponse {
+    repeated OrderTrackingResponse orders = 1;
+}
