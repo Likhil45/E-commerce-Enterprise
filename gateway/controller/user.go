@@ -3,7 +3,7 @@ package controller
 import (
 	"context"
 	"e-commerce/models"
-	"e-commerce/protobuf"
+	"e-commerce/protobuf/protobuf"
 	"e-commerce/write-db-service/store"
 	"fmt"
 	"log"
@@ -26,7 +26,7 @@ func CreateUser(c *gin.Context) {
 	}
 	defer conn.Close()
 	grpcRequest := &protobuf.RegisterUserRequest{
-		Username: user.Username, Userid: int32(user.UserID), Email: user.Email, Password: user.Password,
+		Username: user.Username, Userid: uint32(user.ID), Email: user.Email, Password: user.Password,
 	}
 	client := protobuf.NewUserServiceClient(conn)
 
@@ -84,7 +84,7 @@ func GetUser(ctx *gin.Context) {
 	}
 	defer conn.Close()
 
-	grpcRequest := &protobuf.GetUserRequest{UserId: int32(id)}
+	grpcRequest := &protobuf.GetUserRequest{UserId: uint32(id)}
 	client := protobuf.NewUserServiceClient(conn)
 
 	response, err := client.GetUser(context.Background(), grpcRequest)

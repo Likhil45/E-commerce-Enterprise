@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:13
@@ -9,7 +7,18 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: ecom
     ports:
-      - '5432:5432'
+      - "5432:5432"
+
+      # write-db-service:
+      #   build: ./write-db-service
+      #   ports:
+      #     - "50001:50001"
+      #   environment:
+      #     - DATABASE_URL=postgres://user:password@db:5432/ecom
+      #     - KAFKA_BROKER=kafka:9092
+      #   depends_on:
+      #     - kafka
+      # - postgres
 
   kafka:
     image: bitnami/kafka:latest
@@ -18,19 +27,19 @@ services:
       KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
     ports:
-      - '9092:9092'
+      - "9092:9092"
     depends_on:
       - zookeeper
 
   zookeeper:
     image: bitnami/zookeeper:latest
     environment:
-      ALLOW_ANONYMOUS_LOGIN: 'yes'
+      ALLOW_ANONYMOUS_LOGIN: "yes"
     ports:
-      - '2181:2181'
+      - "2181:2181"
 
   redis:
     image: redis:latest
     restart: always
     ports:
-      - '6379:6379'
+      - "6379:6379"

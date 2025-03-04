@@ -1,0 +1,229 @@
+services:
+  postgres:
+    image: postgres:13-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ecom
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d ecom"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  write-db-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: write-db-service/Dockerfile
+    ports:
+      - "50001:50001"
+    environment:
+      DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+      KAFKA_BROKER: "kafka:9092"
+      APP_ENV: "production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+
+  producer-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: producer-service/Dockerfile
+    ports:
+      - "50052:50052"
+    environment:
+      KAFKA_BROKER: "kafka:9092"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  product-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: product-service/Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  consumer-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: consumer-service/Dockerfile
+    environment:
+      KAFKA_BROKER: "kafka:9092"
+      KAFKA_GROUP_ID: "ecommerce-consumer-group"
+      KAFKA_TOPICS: "OrderCreated,InventoryReserved,PaymentProcessed,OrderConfirmed"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  payment-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: payment-service/Dockerfile
+    ports:
+      - "50080:50080"
+    environment:
+      KAFKA_BROKER: "kafka:9092"
+      PRODUCER_SERVICE: "producer-service:50052"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      producer-service:
+        condition: service_started
+    networks:
+      - app-network
+
+  gateway:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+      JWT_SECRET: "your-secret-key"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  inventory-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: inventory-service/Dockerfile
+    ports:
+      - "50030:50030"
+    environment:
+      DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+      KAFKA_BROKER: "kafka:9092"
+      APP_ENV: "production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  notification-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: notification-service/Dockerfile
+    ports:
+      - "50020:50020"
+    environment:
+      REDIS_SERVICE: "redis-service:50010"
+    depends_on:
+      redis-service:
+        condition: service_started
+    networks:
+      - app-network
+
+  kafka:
+    image: bitnami/kafka:latest
+    environment:
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    networks:
+      - app-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kafka-topics.sh",
+          "--list",
+          "--bootstrap-server",
+          "localhost:9092",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+
+  redis-service:
+    build:
+      context: . # Set monorepo root as the build context
+      dockerfile: redis-service/Dockerfile
+    ports:
+      - "50010:50010"
+    environment:
+      REDIS_HOST: "redis:6379"
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+
+  order-service:
+    build:
+      context: . # Use the repository root as the build context
+      dockerfile: order-service/Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+      KAFKA_BROKER: "kafka:9092"
+      REDIS_HOST: "redis:6379"
+      APP_ENV: "production"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

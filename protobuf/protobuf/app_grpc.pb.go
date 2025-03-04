@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_RegisterUser_FullMethodName     = "/all_services.UserService/RegisterUser"
-	UserService_AuthenticateUser_FullMethodName = "/all_services.UserService/AuthenticateUser"
-	UserService_GetUser_FullMethodName          = "/all_services.UserService/GetUser"
+	UserService_RegisterUser_FullMethodName     = "/UserService/RegisterUser"
+	UserService_AuthenticateUser_FullMethodName = "/UserService/AuthenticateUser"
+	UserService_GetUser_FullMethodName          = "/UserService/GetUser"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -180,7 +180,7 @@ func _UserService_GetUser_Handler(srv interface{}, ctx context.Context, dec func
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var UserService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.UserService",
+	ServiceName: "UserService",
 	HandlerType: (*UserServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -201,11 +201,11 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	ProductService_CreateProduct_FullMethodName = "/all_services.ProductService/CreateProduct"
-	ProductService_GetProduct_FullMethodName    = "/all_services.ProductService/GetProduct"
-	ProductService_ListProducts_FullMethodName  = "/all_services.ProductService/ListProducts"
-	ProductService_UpdateProduct_FullMethodName = "/all_services.ProductService/UpdateProduct"
-	ProductService_DeleteProduct_FullMethodName = "/all_services.ProductService/DeleteProduct"
+	ProductService_CreateProduct_FullMethodName = "/ProductService/CreateProduct"
+	ProductService_GetProduct_FullMethodName    = "/ProductService/GetProduct"
+	ProductService_ListProducts_FullMethodName  = "/ProductService/ListProducts"
+	ProductService_UpdateProduct_FullMethodName = "/ProductService/UpdateProduct"
+	ProductService_DeleteProduct_FullMethodName = "/ProductService/DeleteProduct"
 )
 
 // ProductServiceClient is the client API for ProductService service.
@@ -430,7 +430,7 @@ func _ProductService_DeleteProduct_Handler(srv interface{}, ctx context.Context,
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ProductService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.ProductService",
+	ServiceName: "ProductService",
 	HandlerType: (*ProductServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -459,9 +459,9 @@ var ProductService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	InventoryService_TrackStock_FullMethodName  = "/all_services.InventoryService/TrackStock"
-	InventoryService_UpdateStock_FullMethodName = "/all_services.InventoryService/UpdateStock"
-	InventoryService_GetStock_FullMethodName    = "/all_services.InventoryService/GetStock"
+	InventoryService_TrackStock_FullMethodName  = "/InventoryService/TrackStock"
+	InventoryService_UpdateStock_FullMethodName = "/InventoryService/UpdateStock"
+	InventoryService_GetStock_FullMethodName    = "/InventoryService/GetStock"
 )
 
 // InventoryServiceClient is the client API for InventoryService service.
@@ -620,7 +620,7 @@ func _InventoryService_GetStock_Handler(srv interface{}, ctx context.Context, de
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var InventoryService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.InventoryService",
+	ServiceName: "InventoryService",
 	HandlerType: (*InventoryServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -641,11 +641,11 @@ var InventoryService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	OrderService_CreateOrder_FullMethodName = "/all_services.OrderService/CreateOrder"
-	OrderService_GetOrder_FullMethodName    = "/all_services.OrderService/GetOrder"
-	OrderService_ListOrders_FullMethodName  = "/all_services.OrderService/ListOrders"
-	OrderService_UpdateOrder_FullMethodName = "/all_services.OrderService/UpdateOrder"
-	OrderService_DeleteOrder_FullMethodName = "/all_services.OrderService/DeleteOrder"
+	OrderService_CreateOrder_FullMethodName = "/OrderService/CreateOrder"
+	OrderService_GetOrder_FullMethodName    = "/OrderService/GetOrder"
+	OrderService_ListOrders_FullMethodName  = "/OrderService/ListOrders"
+	OrderService_UpdateOrder_FullMethodName = "/OrderService/UpdateOrder"
+	OrderService_DeleteOrder_FullMethodName = "/OrderService/DeleteOrder"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -870,7 +870,7 @@ func _OrderService_DeleteOrder_Handler(srv interface{}, ctx context.Context, dec
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var OrderService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.OrderService",
+	ServiceName: "OrderService",
 	HandlerType: (*OrderServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -899,7 +899,7 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	PaymentService_ProcessPayment_FullMethodName = "/all_services.PaymentService/ProcessPayment"
+	PaymentService_ProcessPayment_FullMethodName = "/PaymentService/ProcessPayment"
 )
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -992,7 +992,7 @@ func _PaymentService_ProcessPayment_Handler(srv interface{}, ctx context.Context
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PaymentService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.PaymentService",
+	ServiceName: "PaymentService",
 	HandlerType: (*PaymentServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1005,7 +1005,7 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	NotificationService_SendNotification_FullMethodName = "/all_services.NotificationService/SendNotification"
+	NotificationService_SendNotification_FullMethodName = "/NotificationService/SendNotification"
 )
 
 // NotificationServiceClient is the client API for NotificationService service.
@@ -1098,7 +1098,7 @@ func _NotificationService_SendNotification_Handler(srv interface{}, ctx context.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var NotificationService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.NotificationService",
+	ServiceName: "NotificationService",
 	HandlerType: (*NotificationServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1111,8 +1111,8 @@ var NotificationService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AuditService_LogEvent_FullMethodName = "/all_services.AuditService/LogEvent"
-	AuditService_GetLogs_FullMethodName  = "/all_services.AuditService/GetLogs"
+	AuditService_LogEvent_FullMethodName = "/AuditService/LogEvent"
+	AuditService_GetLogs_FullMethodName  = "/AuditService/GetLogs"
 )
 
 // AuditServiceClient is the client API for AuditService service.
@@ -1238,7 +1238,7 @@ func _AuditService_GetLogs_Handler(srv interface{}, ctx context.Context, dec fun
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AuditService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.AuditService",
+	ServiceName: "AuditService",
 	HandlerType: (*AuditServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1255,8 +1255,8 @@ var AuditService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	OrderTrackingService_TrackOrder_FullMethodName   = "/all_services.OrderTrackingService/TrackOrder"
-	OrderTrackingService_SearchOrders_FullMethodName = "/all_services.OrderTrackingService/SearchOrders"
+	OrderTrackingService_TrackOrder_FullMethodName   = "/OrderTrackingService/TrackOrder"
+	OrderTrackingService_SearchOrders_FullMethodName = "/OrderTrackingService/SearchOrders"
 )
 
 // OrderTrackingServiceClient is the client API for OrderTrackingService service.
@@ -1382,7 +1382,7 @@ func _OrderTrackingService_SearchOrders_Handler(srv interface{}, ctx context.Con
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var OrderTrackingService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "all_services.OrderTrackingService",
+	ServiceName: "OrderTrackingService",
 	HandlerType: (*OrderTrackingServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1392,6 +1392,396 @@ var OrderTrackingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SearchOrders",
 			Handler:    _OrderTrackingService_SearchOrders_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "protobuf/app.proto",
+}
+
+const (
+	DatabaseService_GetStock_FullMethodName    = "/DatabaseService/GetStock"
+	DatabaseService_UpdateStock_FullMethodName = "/DatabaseService/UpdateStock"
+)
+
+// DatabaseServiceClient is the client API for DatabaseService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// DB
+type DatabaseServiceClient interface {
+	GetStock(ctx context.Context, in *StockRequest, opts ...grpc.CallOption) (*StockResponse, error)
+	UpdateStock(ctx context.Context, in *StockUpdateRequest, opts ...grpc.CallOption) (*StockResponse, error)
+}
+
+type databaseServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDatabaseServiceClient(cc grpc.ClientConnInterface) DatabaseServiceClient {
+	return &databaseServiceClient{cc}
+}
+
+func (c *databaseServiceClient) GetStock(ctx context.Context, in *StockRequest, opts ...grpc.CallOption) (*StockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StockResponse)
+	err := c.cc.Invoke(ctx, DatabaseService_GetStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *databaseServiceClient) UpdateStock(ctx context.Context, in *StockUpdateRequest, opts ...grpc.CallOption) (*StockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StockResponse)
+	err := c.cc.Invoke(ctx, DatabaseService_UpdateStock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DatabaseServiceServer is the server API for DatabaseService service.
+// All implementations must embed UnimplementedDatabaseServiceServer
+// for forward compatibility.
+//
+// DB
+type DatabaseServiceServer interface {
+	GetStock(context.Context, *StockRequest) (*StockResponse, error)
+	UpdateStock(context.Context, *StockUpdateRequest) (*StockResponse, error)
+	mustEmbedUnimplementedDatabaseServiceServer()
+}
+
+// UnimplementedDatabaseServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedDatabaseServiceServer struct{}
+
+func (UnimplementedDatabaseServiceServer) GetStock(context.Context, *StockRequest) (*StockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStock not implemented")
+}
+func (UnimplementedDatabaseServiceServer) UpdateStock(context.Context, *StockUpdateRequest) (*StockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateStock not implemented")
+}
+func (UnimplementedDatabaseServiceServer) mustEmbedUnimplementedDatabaseServiceServer() {}
+func (UnimplementedDatabaseServiceServer) testEmbeddedByValue()                         {}
+
+// UnsafeDatabaseServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DatabaseServiceServer will
+// result in compilation errors.
+type UnsafeDatabaseServiceServer interface {
+	mustEmbedUnimplementedDatabaseServiceServer()
+}
+
+func RegisterDatabaseServiceServer(s grpc.ServiceRegistrar, srv DatabaseServiceServer) {
+	// If the following call pancis, it indicates UnimplementedDatabaseServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&DatabaseService_ServiceDesc, srv)
+}
+
+func _DatabaseService_GetStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DatabaseServiceServer).GetStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DatabaseService_GetStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DatabaseServiceServer).GetStock(ctx, req.(*StockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DatabaseService_UpdateStock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StockUpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DatabaseServiceServer).UpdateStock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DatabaseService_UpdateStock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DatabaseServiceServer).UpdateStock(ctx, req.(*StockUpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// DatabaseService_ServiceDesc is the grpc.ServiceDesc for DatabaseService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DatabaseService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "DatabaseService",
+	HandlerType: (*DatabaseServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetStock",
+			Handler:    _DatabaseService_GetStock_Handler,
+		},
+		{
+			MethodName: "UpdateStock",
+			Handler:    _DatabaseService_UpdateStock_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "protobuf/app.proto",
+}
+
+const (
+	KafkaProducerService_PublishMessage_FullMethodName = "/KafkaProducerService/PublishMessage"
+)
+
+// KafkaProducerServiceClient is the client API for KafkaProducerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type KafkaProducerServiceClient interface {
+	PublishMessage(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error)
+}
+
+type kafkaProducerServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewKafkaProducerServiceClient(cc grpc.ClientConnInterface) KafkaProducerServiceClient {
+	return &kafkaProducerServiceClient{cc}
+}
+
+func (c *kafkaProducerServiceClient) PublishMessage(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*PublishResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PublishResponse)
+	err := c.cc.Invoke(ctx, KafkaProducerService_PublishMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// KafkaProducerServiceServer is the server API for KafkaProducerService service.
+// All implementations must embed UnimplementedKafkaProducerServiceServer
+// for forward compatibility.
+type KafkaProducerServiceServer interface {
+	PublishMessage(context.Context, *PublishRequest) (*PublishResponse, error)
+	mustEmbedUnimplementedKafkaProducerServiceServer()
+}
+
+// UnimplementedKafkaProducerServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedKafkaProducerServiceServer struct{}
+
+func (UnimplementedKafkaProducerServiceServer) PublishMessage(context.Context, *PublishRequest) (*PublishResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PublishMessage not implemented")
+}
+func (UnimplementedKafkaProducerServiceServer) mustEmbedUnimplementedKafkaProducerServiceServer() {}
+func (UnimplementedKafkaProducerServiceServer) testEmbeddedByValue()                              {}
+
+// UnsafeKafkaProducerServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to KafkaProducerServiceServer will
+// result in compilation errors.
+type UnsafeKafkaProducerServiceServer interface {
+	mustEmbedUnimplementedKafkaProducerServiceServer()
+}
+
+func RegisterKafkaProducerServiceServer(s grpc.ServiceRegistrar, srv KafkaProducerServiceServer) {
+	// If the following call pancis, it indicates UnimplementedKafkaProducerServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&KafkaProducerService_ServiceDesc, srv)
+}
+
+func _KafkaProducerService_PublishMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PublishRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KafkaProducerServiceServer).PublishMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: KafkaProducerService_PublishMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KafkaProducerServiceServer).PublishMessage(ctx, req.(*PublishRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// KafkaProducerService_ServiceDesc is the grpc.ServiceDesc for KafkaProducerService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var KafkaProducerService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "KafkaProducerService",
+	HandlerType: (*KafkaProducerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "PublishMessage",
+			Handler:    _KafkaProducerService_PublishMessage_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "protobuf/app.proto",
+}
+
+const (
+	RedisService_SetData_FullMethodName = "/RedisService/SetData"
+	RedisService_GetData_FullMethodName = "/RedisService/GetData"
+)
+
+// RedisServiceClient is the client API for RedisService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Redis
+type RedisServiceClient interface {
+	SetData(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error)
+	GetData(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
+}
+
+type redisServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewRedisServiceClient(cc grpc.ClientConnInterface) RedisServiceClient {
+	return &redisServiceClient{cc}
+}
+
+func (c *redisServiceClient) SetData(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetResponse)
+	err := c.cc.Invoke(ctx, RedisService_SetData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *redisServiceClient) GetData(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetResponse)
+	err := c.cc.Invoke(ctx, RedisService_GetData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RedisServiceServer is the server API for RedisService service.
+// All implementations must embed UnimplementedRedisServiceServer
+// for forward compatibility.
+//
+// Redis
+type RedisServiceServer interface {
+	SetData(context.Context, *SetRequest) (*SetResponse, error)
+	GetData(context.Context, *GetRequest) (*GetResponse, error)
+	mustEmbedUnimplementedRedisServiceServer()
+}
+
+// UnimplementedRedisServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedRedisServiceServer struct{}
+
+func (UnimplementedRedisServiceServer) SetData(context.Context, *SetRequest) (*SetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetData not implemented")
+}
+func (UnimplementedRedisServiceServer) GetData(context.Context, *GetRequest) (*GetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetData not implemented")
+}
+func (UnimplementedRedisServiceServer) mustEmbedUnimplementedRedisServiceServer() {}
+func (UnimplementedRedisServiceServer) testEmbeddedByValue()                      {}
+
+// UnsafeRedisServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to RedisServiceServer will
+// result in compilation errors.
+type UnsafeRedisServiceServer interface {
+	mustEmbedUnimplementedRedisServiceServer()
+}
+
+func RegisterRedisServiceServer(s grpc.ServiceRegistrar, srv RedisServiceServer) {
+	// If the following call pancis, it indicates UnimplementedRedisServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&RedisService_ServiceDesc, srv)
+}
+
+func _RedisService_SetData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RedisServiceServer).SetData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RedisService_SetData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RedisServiceServer).SetData(ctx, req.(*SetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RedisService_GetData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RedisServiceServer).GetData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RedisService_GetData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RedisServiceServer).GetData(ctx, req.(*GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// RedisService_ServiceDesc is the grpc.ServiceDesc for RedisService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var RedisService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "RedisService",
+	HandlerType: (*RedisServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SetData",
+			Handler:    _RedisService_SetData_Handler,
+		},
+		{
+			MethodName: "GetData",
+			Handler:    _RedisService_GetData_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

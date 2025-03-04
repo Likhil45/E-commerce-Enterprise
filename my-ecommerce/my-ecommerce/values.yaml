@@ -1,0 +1,60 @@
+global:
+  database:
+    host: postgres
+    user: user
+    password: password
+    dbname: ecom
+    port: 5432
+
+  kafka:
+    broker: kafka:9092
+
+  redis:
+    host: redis:6379
+
+gateway-service:
+  replicaCount: 2
+  image:
+    repository: e-commerceplatform-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8086 # This is the crucial line
+  env:
+    DATABASE_URL: "user={{ .Values.global.database.user }} password={{ .Values.global.database.password }} dbname={{ .Values.global.database.dbname }} host={{ .Values.global.database.host }} port={{ .Values.global.database.port }} sslmode=disable"
+    JWT_SECRET: "your-secret-key"
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+  serviceAccount:
+    create: true
+    name: gateway-service-account
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations: {}
+    hosts:
+      - host: gateway.example.com
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls: []
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+product-service:
+  replicaCount: 3
+  image:
+    repository: e-commerceplatform-producer-service
+    tag: latest
+  service:
+    port: 8081

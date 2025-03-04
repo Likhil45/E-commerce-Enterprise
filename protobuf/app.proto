@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package all_services;
 
-option go_package = "./protobuf";
+
+option go_package = "./protobuf;protobuf";
 // User Service
 service UserService {
     rpc RegisterUser (RegisterUserRequest) returns (UserResponse);
@@ -14,7 +14,7 @@ message RegisterUserRequest {
     string username = 1;
     string email = 2;
     string password = 3;
-    int32 userid=4;
+    uint32 userid=4;
 }
 
 message AuthenticateUserRequest {
@@ -23,7 +23,7 @@ message AuthenticateUserRequest {
 }
 
 message GetUserRequest {
-    int32 user_id = 1;
+    uint32 user_id = 1;
 }
 
 message UserResponse {
@@ -46,21 +46,24 @@ service ProductService {
 }
 
 message ProductRequest {
-    int32 product_id = 1;
+    uint32 product_id = 1;
     string name = 2;
     string description = 3;
     float price = 4;
+    uint32 quantity=5;
+
 }
 
 message ProductIDRequest {
-    int32 product_id = 1;
+    uint32 product_id = 1;
 }
 
 message ProductResponse {
-    int32 product_id = 1;
+    uint32 product_id = 1;
     string name = 2;
     string description = 3;
     float price = 4;
+    uint32 quantity=5;
 }
 
 message ProductListResponse {
@@ -77,19 +80,22 @@ service InventoryService {
 }
 
 message StockRequest {
-    int32 product_id = 1;
+    uint32 product_id = 1;
 }
 
 message StockUpdateRequest {
-    int32 product_id = 1;
-    int32 quantity = 2;
+    uint32 product_id = 1;
+    uint32 quantity = 2;
+
 }
 
 message StockResponse {
-    int32 product_id = 1;
-    int32 quantity = 2;
+    uint32 product_id = 1;
+    uint32 quantity = 2;
     string status = 3;
 }
+
+
 
 // Order Service
 service OrderService {
@@ -101,26 +107,26 @@ service OrderService {
 }
 
 message OrderRequest {
-    int32 order_id = 1;
-    int32 user_id = 2;
+    uint32 order_id = 1;
+    uint32 user_id = 2;
     repeated OrderItem items = 3;
     float total_amount = 4;
 }
 
 message OrderIDRequest {
-    int32 order_id = 1;
+    uint32 order_id = 1;
 }
 
 message OrderResponse {
-    int32 order_id = 1;
-    int32 user_id = 2;
+    uint32 order_id = 1;
+    uint32 user_id = 2;
     repeated OrderItem items = 3;
     float total_amount = 4;
 }
 
 message OrderItem {
-    int32 product_id = 1;
-    int32 quantity = 2;
+    uint32 product_id = 1;
+    uint32 quantity = 2;
     float price = 3;
 }
 
@@ -134,16 +140,18 @@ service PaymentService {
 }
 
 message PaymentRequest {
-    int32 order_id = 1;
+    uint32 order_id = 1;
     float amount = 2;
     string method = 3;
+    uint32 user_id=4;
 }
 
 message PaymentResponse {
-    int32 payment_id = 1;
-    int32 order_id = 2;
+    uint32 payment_id = 1;
+    uint32 order_id = 2;
     float amount = 3;
     string status = 4;
+    uint32 user_id=5;
 }
 
 // Notification Service
@@ -152,7 +160,7 @@ service NotificationService {
 }
 
 message NotificationRequest {
-    int32 user_id = 1;
+    uint32 user_id = 1;
     string message = 2;
 }
 
@@ -186,11 +194,11 @@ service OrderTrackingService {
 }
 
 message OrderTrackingRequest {
-    int32 order_id = 1;
+    uint32 order_id = 1;
 }
 
 message OrderTrackingResponse {
-    int32 order_id = 1;
+    uint32 order_id = 1;
     repeated OrderEvent events = 2;
 }
 
@@ -199,11 +207,60 @@ message OrderEvent {
 }
 
 message OrderSearchRequest {
-    int32 user_id = 1;
-    int32 product_id = 2;
+    uint32 user_id = 1;
+    uint32 product_id = 2;
     string status = 5;
 }
 
 message OrderSearchResponse {
     repeated OrderTrackingResponse orders = 1;
+}
+
+//DB
+service DatabaseService {
+    rpc GetStock (StockRequest) returns (StockResponse);
+    rpc UpdateStock (StockUpdateRequest) returns (StockResponse);
+}
+
+
+
+//Kafka
+
+service KafkaProducerService {
+    rpc PublishMessage (PublishRequest) returns (PublishResponse);
+}
+
+message PublishRequest {
+    string topic = 1;       // Topic name (e.g., "orders", "payments")
+    string event_type = 2;  // Event type (e.g., "OrderCreated", "PaymentProcessed")
+    string message = 3;     // JSON message payload
+}
+
+message PublishResponse {
+    string status = 1;
+}
+
+
+//Redis
+service RedisService {
+    rpc SetData (SetRequest) returns (SetResponse);
+    rpc GetData (GetRequest) returns (GetResponse);
+}
+
+message SetRequest {
+    string key = 1;
+    string value = 2;
+    uint32 expiration = 3;
+}
+
+message SetResponse {
+    string status = 1;
+}
+
+message GetRequest {
+    string key = 1;
+}
+
+message GetResponse {
+    string value = 1;
 }

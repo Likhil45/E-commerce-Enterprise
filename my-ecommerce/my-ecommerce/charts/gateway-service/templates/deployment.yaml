@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-gateway
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          env:
+            - name: DATABASE_URL
+              value: "{{ .Values.env.DATABASE_URL }}"
+            - name: JWT_SECRET
+              value: "{{ .Values.env.JWT_SECRET }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

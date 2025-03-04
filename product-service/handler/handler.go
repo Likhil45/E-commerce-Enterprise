@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	"e-commerce/models"
-	"e-commerce/protobuf"
+	"e-commerce/protobuf/protobuf"
 	"fmt"
 	"log"
 	"net/http"
@@ -23,6 +23,7 @@ func CreateProduct(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, err)
 
 	}
+	log.Println(prod)
 
 	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
 	if err != nil {
@@ -30,7 +31,7 @@ func CreateProduct(c *gin.Context) {
 	}
 	defer conn.Close()
 	grpcRequest := &protobuf.ProductRequest{
-		ProductId: int32(prod.ProductID), Name: prod.Name, Price: float32(prod.Price), Description: prod.Description,
+		ProductId: uint32(prod.ProductID), Name: prod.Name, Price: float32(prod.Price), Description: prod.Description, Quantity: uint32(prod.StockQuantity),
 	}
 	client := protobuf.NewProductServiceClient(conn)
 
@@ -42,7 +43,6 @@ func CreateProduct(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"status": "success", "data": response})
-
 }
 
 func GetProduct(ctx *gin.Context) {
@@ -58,7 +58,7 @@ func GetProduct(ctx *gin.Context) {
 	}
 	defer conn.Close()
 
-	grpcRequest := &protobuf.ProductIDRequest{ProductId: int32(id)}
+	grpcRequest := &protobuf.ProductIDRequest{ProductId: uint32(id)}
 	client := protobuf.NewProductServiceClient(conn)
 
 	response, err := client.GetProduct(context.Background(), grpcRequest)
@@ -103,7 +103,7 @@ func DeleteProduct(ctx *gin.Context) {
 	}
 	defer conn.Close()
 
-	grpcRequest := &protobuf.ProductIDRequest{ProductId: int32(id)}
+	grpcRequest := &protobuf.ProductIDRequest{ProductId: uint32(id)}
 	client := protobuf.NewProductServiceClient(conn)
 
 	response, err := client.DeleteProduct(context.Background(), grpcRequest)
@@ -131,7 +131,7 @@ func UpdateProduct(ctx *gin.Context) {
 	}
 	defer conn.Close()
 
-	grpcRequest := &protobuf.ProductRequest{ProductId: int32(prod.ProductID), Name: prod.Name, Price: float32(prod.Price), Description: prod.Description}
+	grpcRequest := &protobuf.ProductRequest{ProductId: uint32(prod.ProductID), Name: prod.Name, Price: float32(prod.Price), Description: prod.Description}
 	client := protobuf.NewProductServiceClient(conn)
 
 	response, err := client.UpdateProduct(context.Background(), grpcRequest)

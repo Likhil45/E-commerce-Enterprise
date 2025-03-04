@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"e-commerce/models"
-	"e-commerce/protobuf"
+	"e-commerce/protobuf/protobuf"
 	"e-commerce/write-db-service/services"
 	"e-commerce/write-db-service/store"
 	"fmt"
@@ -25,7 +25,7 @@ func (w *writeDB) RegisterUser(ctx context.Context, req *protobuf.RegisterUserRe
 
 	var user models.User
 	user.Email = req.GetEmail()
-	user.UserID = int(req.GetUserid())
+	user.ID = uint(req.GetUserid())
 	user.Password = req.GetPassword()
 	user.Username = req.GetUsername()
 
@@ -34,7 +34,7 @@ func (w *writeDB) RegisterUser(ctx context.Context, req *protobuf.RegisterUserRe
 		return nil, err
 	}
 
-	return &protobuf.UserResponse{UserId: req.GetUserid(), Username: req.GetUsername(), Email: req.GetEmail()}, nil
+	return &protobuf.UserResponse{UserId: int32(req.GetUserid()), Username: req.GetUsername(), Email: req.GetEmail()}, nil
 }
 
 func (w *writeDB) AuthenticateUser(ctx context.Context, req *protobuf.AuthenticateUserRequest) (*protobuf.AuthResponse, error) {
@@ -63,7 +63,7 @@ func (w *writeDB) GetUser(ctx context.Context, req *protobuf.GetUserRequest) (*p
 	if err := store.DB.Where("user_id = ?", req.GetUserId()).First(&user).Error; err != nil {
 		return nil, err
 	}
-	return &protobuf.UserResponse{UserId: int32(user.UserID), Username: user.Username, Email: user.Email}, nil
+	return &protobuf.UserResponse{UserId: int32(user.ID), Username: user.Username, Email: user.Email}, nil
 }
 
 func GenerateToken(userID uint) (string, error) {
@@ -87,6 +87,14 @@ func main() {
 	if err != nil {
 		log.Println("Unable to listen to 50001 port", err)
 	}
+
+	// Set up gRPC connection to Kafka Producer Service
+	kafkaConn, err := grpc.Dial("localhost:50052", grpc.WithInsecure()) // Change to Kafka Producer's actual address
+	if err != nil {
+		log.Fatalf("Failed to connect to Kafka Producer Service: %v", err)
+	}
+	kafkaClient := protobuf.NewKafkaProducerServiceClient(kafkaConn)
+
 	grpcServer := grpc.NewServer()
 
 	//User
@@ -94,6 +102,15 @@ func main() {
 
 	//Product
 	protobuf.RegisterProductServiceServer(grpcServer, &services.WriteProduct{})
+
+	//Inventory
+	protobuf.RegisterDatabaseServiceServer(grpcServer, &services.DatabaseService{})
+
+	//Order
+	orderService := &services.OrderService{KafkaClient: kafkaClient}
+
+	protobuf.RegisterOrderServiceServer(grpcServer, orderService)
+
 	err1 := grpcServer.Serve(lsn)
 	if err1 != nil {
 		log.Println("Unable to Serve ", err1)
