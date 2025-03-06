@@ -92,6 +92,8 @@ func (h *ConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cl
 				ProcessOrderConfirmed(string(msg.Value))
 			case "OutOfStock":
 				ProductOutOfStock(string(msg.Value))
+			case "PaymentFailed":
+				PaymentFailed(string(msg.Value))
 			default:
 				log.Printf("Unknown topic: %s", msg.Topic)
 			}
@@ -120,7 +122,7 @@ func ProcessOrderCreated(message string) {
 	}
 
 	//  Validate event data
-	if order.OrderId == 0 || order.UserId == 0 || len(order.Items) == 0 {
+	if order.OrderId == 0 || order.UserId == "" || len(order.Items) == 0 {
 		log.Println("Invalid OrderCreated event: missing required fields")
 
 		return
@@ -148,15 +150,15 @@ func ProcessOrderCreated(message string) {
 		log.Println("Payment processing failed:", err)
 		return
 	}
-	notReq := &protobuf.NotificationRequest{UserId: order.GetUserId(), Message: "Your Order is Created"}
+	// notReq := &protobuf.NotificationRequest{UserId: order.GetUserId(), Message: "Your Order is Created"}
 
-	notResp, err2 := conshand.CallNotificationService(notReq)
-	if err2 != nil {
-		log.Println("Unable to set Nofication", err)
-		return
-	}
+	// notResp, err2 := conshand.CallNotificationService(notReq)
+	// if err2 != nil {
+	// 	log.Println("Unable to set Nofication", err2)
+	// 	return
+	// }
 	log.Printf("\nPayment Process Response: %v", paymentResponse)
-	log.Printf("\nNotification Response: %v", notResp)
+	// log.Printf("\nNotification Response: %v", notResp)
 
 	// }
 }
@@ -240,7 +242,25 @@ func ProductOutOfStock(message string) {
 	}
 
 	//Need to Implement the notification properly
-	notReq := &protobuf.NotificationRequest{UserId: prodId, Message: "Your Order is Confirmed"}
+	notReq := &protobuf.NotificationRequest{UserId: "122", Message: "Your Order is Confirmed"}
+	notResp, err2 := conshand.CallNotificationService(notReq)
+	if err2 != nil {
+		log.Println("Unable to set Nofication", err)
+		return
+	}
+	log.Printf("\nNotification Response: %v", notResp)
+
+}
+func PaymentFailed(message string) {
+	log.Println("Processing Out of Stock event:", message)
+	var payresp protobuf.PaymentResponse
+
+	err := json.Unmarshal([]byte(message), &payresp)
+	if err != nil {
+		log.Println("Unable to Unmarshal Payment Failed event")
+		return
+	}
+	notReq := &protobuf.NotificationRequest{UserId: payresp.GetUserId(), Message: "Your Payment Failed!! Please update your payment details and Try again!!!"}
 	notResp, err2 := conshand.CallNotificationService(notReq)
 	if err2 != nil {
 		log.Println("Unable to set Nofication", err)

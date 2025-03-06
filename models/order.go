@@ -6,7 +6,7 @@ import (
 
 type Order struct {
 	OrderID    uint32      `gorm:"primaryKey;autoIncrement"`
-	UserID     uint32      `gorm:"not null"`
+	UserID     string      `gorm:"not null"`
 	OrderDate  time.Time   `gorm:"default:CURRENT_TIMESTAMP"`
 	Status     string      `gorm:"size:50;default:'pending'"` // "pending", "confirmed", "shipped", "cancelled"
 	TotalPrice float64     `gorm:"type:decimal(10,2)"`

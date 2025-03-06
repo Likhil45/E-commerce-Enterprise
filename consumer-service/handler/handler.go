@@ -3,7 +3,6 @@ package conshand
 import (
 	"context"
 	"log"
-	"strconv"
 
 	"e-commerce/protobuf/protobuf"
 
@@ -28,23 +27,26 @@ func CallPaymentService(paymentReq *protobuf.PaymentRequest) (*protobuf.PaymentR
 		log.Println("Error calling ProcessPayment:", err)
 		return nil, err
 	}
-	if response.Status == "SUCCESS" {
-		conn, err := grpc.Dial(":50010", grpc.WithInsecure())
-		if err != nil {
-			log.Println("Failed to connect to Redis Service:", err)
-			return nil, err
-		}
-		defer conn.Close()
-		client := protobuf.NewRedisServiceClient(conn)
-		usrStr := strconv.Itoa(int(paymentReq.GetUserId()))
-		setReq := &protobuf.SetRequest{Key: usrStr, Value: "Your Order was created Successfully!!!"}
-		resp, err := client.SetData(context.Background(), setReq)
-		if err != nil {
-			log.Println("Unable to set data to redis")
-		}
-		log.Println(resp)
 
+	connR, err := grpc.Dial(":50010", grpc.WithInsecure())
+	if err != nil {
+		log.Println("Failed to connect to Redis Service:", err)
+		return nil, err
 	}
+	defer conn.Close()
+	clientR := protobuf.NewRedisServiceClient(connR)
+	// usrStr := strconv.Itoa(int(paymentReq.GetUserId()))
+	var setReq *protobuf.SetRequest
+	if response.Status == "SUCCESS" {
+		setReq = &protobuf.SetRequest{Key: paymentReq.UserId, Value: "Your Order was created Successfully!!!"}
+	} else {
+		setReq = &protobuf.SetRequest{Key: paymentReq.UserId, Value: "Payment Failed!!, Update card details"}
+	}
+	resp, err := clientR.SetData(context.Background(), setReq)
+	if err != nil {
+		log.Println("Unable to set data to redis")
+	}
+	log.Println(resp)
 
 	return response, nil
 }
@@ -59,9 +61,9 @@ func CallNotificationService(not *protobuf.NotificationRequest) (*protobuf.Notif
 	}
 	defer connR.Close()
 	clientR := protobuf.NewRedisServiceClient(connR)
-	usrId := strconv.Itoa(int(not.UserId))
-	response1, err1 := clientR.SetData(context.Background(), &protobuf.SetRequest{Key: usrId, Value: "Your Order is confiremed!!!"})
-	if err1 != nil || response1.Status == "FAILED" {
+	// usrId := strconv.Itoa(int(not.UserId))
+	_, err1 := clientR.SetData(context.Background(), &protobuf.SetRequest{Key: not.UserId, Value: not.Message})
+	if err1 != nil {
 		log.Println("Unable to send data to notification service", err1)
 		return nil, err1
 	}

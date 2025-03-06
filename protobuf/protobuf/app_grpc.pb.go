@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_RegisterUser_FullMethodName     = "/UserService/RegisterUser"
-	UserService_AuthenticateUser_FullMethodName = "/UserService/AuthenticateUser"
-	UserService_GetUser_FullMethodName          = "/UserService/GetUser"
+	UserService_RegisterUser_FullMethodName          = "/UserService/RegisterUser"
+	UserService_AuthenticateUser_FullMethodName      = "/UserService/AuthenticateUser"
+	UserService_GetUser_FullMethodName               = "/UserService/GetUser"
+	UserService_GetUserPaymentDetails_FullMethodName = "/UserService/GetUserPaymentDetails"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -33,6 +34,7 @@ type UserServiceClient interface {
 	RegisterUser(ctx context.Context, in *RegisterUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	AuthenticateUser(ctx context.Context, in *AuthenticateUserRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
+	GetUserPaymentDetails(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserPaymentResponse, error)
 }
 
 type userServiceClient struct {
@@ -73,6 +75,16 @@ func (c *userServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opt
 	return out, nil
 }
 
+func (c *userServiceClient) GetUserPaymentDetails(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserPaymentResponse)
+	err := c.cc.Invoke(ctx, UserService_GetUserPaymentDetails_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -82,6 +94,7 @@ type UserServiceServer interface {
 	RegisterUser(context.Context, *RegisterUserRequest) (*UserResponse, error)
 	AuthenticateUser(context.Context, *AuthenticateUserRequest) (*AuthResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*UserResponse, error)
+	GetUserPaymentDetails(context.Context, *GetUserRequest) (*UserPaymentResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -100,6 +113,9 @@ func (UnimplementedUserServiceServer) AuthenticateUser(context.Context, *Authent
 }
 func (UnimplementedUserServiceServer) GetUser(context.Context, *GetUserRequest) (*UserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedUserServiceServer) GetUserPaymentDetails(context.Context, *GetUserRequest) (*UserPaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserPaymentDetails not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -176,6 +192,24 @@ func _UserService_GetUser_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_GetUserPaymentDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetUserPaymentDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetUserPaymentDetails_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetUserPaymentDetails(ctx, req.(*GetUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -194,6 +228,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUser",
 			Handler:    _UserService_GetUser_Handler,
+		},
+		{
+			MethodName: "GetUserPaymentDetails",
+			Handler:    _UserService_GetUserPaymentDetails_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

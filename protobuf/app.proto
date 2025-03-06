@@ -8,13 +8,15 @@ service UserService {
     rpc RegisterUser (RegisterUserRequest) returns (UserResponse);
     rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthResponse);
     rpc GetUser (GetUserRequest) returns (UserResponse);
+    rpc GetUserPaymentDetails (GetUserRequest) returns (UserPaymentResponse);
 }
 
 message RegisterUserRequest {
     string username = 1;
     string email = 2;
     string password = 3;
-    uint32 userid=4;
+    string user_id = 4;
+    PaymentDetails payment_details=5;
 }
 
 message AuthenticateUserRequest {
@@ -23,18 +25,32 @@ message AuthenticateUserRequest {
 }
 
 message GetUserRequest {
-    uint32 user_id = 1;
+    string user_id = 1;
 }
 
 message UserResponse {
-    int32 user_id = 1;
+    string user_id = 1;
     string username = 2;
     string email = 3;
+    PaymentDetails payment = 4;
 }
 
 message AuthResponse {
     string token = 1;
 }
+
+message PaymentDetails {
+    uint32 payment_id = 1;
+    string payment_method = 2;  // "card", "paypal", "crypto", etc.
+    string card_number = 3;     // Masked card number (e.g., "**** **** **** 1234")
+    string expiry_date = 4;     // Format: "MM/YY"
+}
+
+message UserPaymentResponse {
+    bool has_payment_details = 1;
+    PaymentDetails payment = 2;
+}
+
 
 // Product Service
 service ProductService {
@@ -108,7 +124,7 @@ service OrderService {
 
 message OrderRequest {
     uint32 order_id = 1;
-    uint32 user_id = 2;
+    string user_id = 2;
     repeated OrderItem items = 3;
     float total_amount = 4;
 }
@@ -119,7 +135,7 @@ message OrderIDRequest {
 
 message OrderResponse {
     uint32 order_id = 1;
-    uint32 user_id = 2;
+    string user_id = 2;
     repeated OrderItem items = 3;
     float total_amount = 4;
 }
@@ -143,7 +159,7 @@ message PaymentRequest {
     uint32 order_id = 1;
     float amount = 2;
     string method = 3;
-    uint32 user_id=4;
+    string user_id=4;
 }
 
 message PaymentResponse {
@@ -151,7 +167,7 @@ message PaymentResponse {
     uint32 order_id = 2;
     float amount = 3;
     string status = 4;
-    uint32 user_id=5;
+    string user_id=5;
 }
 
 // Notification Service
@@ -160,7 +176,7 @@ service NotificationService {
 }
 
 message NotificationRequest {
-    uint32 user_id = 1;
+    string user_id = 1;
     string message = 2;
 }
 
@@ -207,7 +223,7 @@ message OrderEvent {
 }
 
 message OrderSearchRequest {
-    uint32 user_id = 1;
+    string user_id = 1;
     uint32 product_id = 2;
     string status = 5;
 }

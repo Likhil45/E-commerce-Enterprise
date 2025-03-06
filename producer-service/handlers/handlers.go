@@ -57,6 +57,10 @@ func (p *KafkaProducerService) PublishMessage(ctx context.Context, req *protobuf
 	}
 
 	partition, offset, err := p.producer.SendMessage(msg)
+	log.Printf("Order is stored in topic(%s)/partition(%d)/offset(%d)\n",
+		msg.Topic,
+		partition,
+		offset)
 	if err != nil {
 		log.Printf("Failed to publish message: %v", err)
 		return nil, err

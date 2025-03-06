@@ -4,7 +4,6 @@ import (
 	"context"
 	"e-commerce/protobuf/protobuf"
 	"log"
-	"strconv"
 )
 
 // type NotificationService struct {
@@ -46,8 +45,8 @@ func NewNotificationService(redisClient protobuf.RedisServiceClient) *Notificati
 }
 
 func (n *NotificationService) SendNotification(ctx context.Context, req *protobuf.NotificationRequest) (*protobuf.NotificationResponse, error) {
-	usrID := strconv.Itoa(int(req.UserId))
-	grpcRequest := &protobuf.GetRequest{Key: usrID}
+	// usrID := strconv.Itoa(int(req.UserId))
+	grpcRequest := &protobuf.GetRequest{Key: req.UserId}
 
 	response, err := n.redisClient.GetData(ctx, grpcRequest)
 	if err != nil {

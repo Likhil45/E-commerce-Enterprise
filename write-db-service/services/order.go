@@ -27,7 +27,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *protobuf.OrderReque
 
 	order := models.Order{
 
-		UserID: uint32(req.UserId),
+		UserID: (req.UserId),
 	}
 
 	for _, item := range req.Items {
@@ -118,7 +118,7 @@ func (s *OrderService) GetOrder(ctx context.Context, req *protobuf.OrderIDReques
 
 	return &protobuf.OrderResponse{
 		OrderId:     uint32(order.OrderID),
-		UserId:      uint32(order.UserID),
+		UserId:      (order.UserID),
 		Items:       items,
 		TotalAmount: float32(order.TotalPrice),
 	}, nil
@@ -142,7 +142,7 @@ func (s *OrderService) ListOrders(ctx context.Context, req *protobuf.Empty) (*pr
 		}
 		orderResponses = append(orderResponses, &protobuf.OrderResponse{
 			OrderId:     uint32(order.OrderID),
-			UserId:      uint32(order.UserID),
+			UserId:      (order.UserID),
 			Items:       items,
 			TotalAmount: float32(order.TotalPrice),
 		})

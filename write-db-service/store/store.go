@@ -20,8 +20,8 @@ func InitDB() {
 	}
 
 	// Auto migrate
-	// DB.Migrator().DropTable(&models.OrderItem{}, &models.Order{}, &models.Product{}, &models.Inventory{}, &models.User{})
-	err1 := DB.AutoMigrate(&models.User{}, &models.Product{}, &models.Order{}, &models.OrderItem{}, &models.Inventory{}, &models.Payment{})
+	// DB.Migrator().DropTable(&models.OrderItem{}, &models.Order{}, &models.Product{}, &models.Inventory{}, &models.User{}, &models.PaymentDetails{}, &models.Payment{})
+	err1 := DB.AutoMigrate(&models.User{}, &models.Product{}, &models.Order{}, &models.OrderItem{}, &models.Inventory{}, &models.Payment{}, models.PaymentDetails{})
 
 	if err1 != nil {
 		log.Fatal(err)

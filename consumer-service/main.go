@@ -12,7 +12,7 @@ import (
 func main() {
 	brokers := []string{"localhost:9092"}
 	groupID := "ecommerce-consumer-group"
-	topics := []string{"OrderCreated", "OutOfStock", "InventoryReserved", "PaymentProcessed", "OrderConfirmed"}
+	topics := []string{"OrderCreated", "OutOfStock", "InventoryReserved", "PaymentProcessed", "OrderConfirmed", "PaymentFailed"}
 
 	// Initialize the Kafka consumer
 	consumerService, err := consumer.NewKafkaConsumer(brokers, groupID, topics)

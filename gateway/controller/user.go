@@ -11,14 +11,30 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 )
 
 func CreateUser(c *gin.Context) {
 
 	var user models.User
+
 	if err := c.ShouldBindJSON(&user); err != nil {
-		log.Println("Unable to bind JSON", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+	userID := uuid.New().String()
+	user.ID = userID
+	user.Payment.UserID = user.ID
+	log.Println(user)
+	if user.Payment != nil {
+		log.Printf("Payment UserID: %s\n", user.Payment.UserID)
+		log.Printf("Payment method: %s\n", user.Payment.PaymentMethod)
+		log.Printf("Card number: %s\n", user.Payment.CardNumber)
+		log.Printf("Expiry date: %s\n", user.Payment.ExpiryDate)
+		log.Printf("CVV: %s\n", user.Payment.CVV)
+
+		// You can now process the payment details further if needed
 	}
 	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
 	if err != nil {
@@ -26,7 +42,7 @@ func CreateUser(c *gin.Context) {
 	}
 	defer conn.Close()
 	grpcRequest := &protobuf.RegisterUserRequest{
-		Username: user.Username, Userid: uint32(user.ID), Email: user.Email, Password: user.Password,
+		Username: user.Username, UserId: (user.ID), Email: user.Email, Password: user.Password, PaymentDetails: &protobuf.PaymentDetails{PaymentMethod: user.Payment.PaymentMethod, CardNumber: user.Payment.CardNumber, ExpiryDate: user.Payment.ExpiryDate},
 	}
 	client := protobuf.NewUserServiceClient(conn)
 
@@ -84,7 +100,7 @@ func GetUser(ctx *gin.Context) {
 	}
 	defer conn.Close()
 
-	grpcRequest := &protobuf.GetUserRequest{UserId: uint32(id)}
+	grpcRequest := &protobuf.GetUserRequest{UserId: (idstr)}
 	client := protobuf.NewUserServiceClient(conn)
 
 	response, err := client.GetUser(context.Background(), grpcRequest)
@@ -116,4 +132,8 @@ func GetAllUsers(c *gin.Context) {
 
 	// Send users as a JSON response
 	c.JSON(http.StatusOK, users)
+}
+
+func AddPaymentDetails(c *gin.Context) {
+
 }
