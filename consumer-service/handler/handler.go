@@ -11,7 +11,7 @@ import (
 
 func CallPaymentService(paymentReq *protobuf.PaymentRequest) (*protobuf.PaymentResponse, error) {
 	//  Connect to gRPC Payment Service
-	conn, err := grpc.Dial(":50080", grpc.WithInsecure())
+	conn, err := grpc.Dial("payment-service:50080", grpc.WithInsecure())
 	if err != nil {
 		log.Println("Failed to connect to Payment Service:", err)
 		return nil, err
@@ -28,7 +28,7 @@ func CallPaymentService(paymentReq *protobuf.PaymentRequest) (*protobuf.PaymentR
 		return nil, err
 	}
 
-	connR, err := grpc.Dial(":50010", grpc.WithInsecure())
+	connR, err := grpc.Dial("redis-service:50010", grpc.WithInsecure())
 	if err != nil {
 		log.Println("Failed to connect to Redis Service:", err)
 		return nil, err
@@ -54,7 +54,7 @@ func CallPaymentService(paymentReq *protobuf.PaymentRequest) (*protobuf.PaymentR
 //Call Notification
 
 func CallNotificationService(not *protobuf.NotificationRequest) (*protobuf.NotificationResponse, error) {
-	connR, err := grpc.Dial(":50010", grpc.WithInsecure())
+	connR, err := grpc.Dial("redis-service:50010", grpc.WithInsecure())
 	if err != nil {
 		log.Println("unable to dial to port 50010 - Redis service", err)
 		return nil, err
@@ -62,13 +62,14 @@ func CallNotificationService(not *protobuf.NotificationRequest) (*protobuf.Notif
 	defer connR.Close()
 	clientR := protobuf.NewRedisServiceClient(connR)
 	// usrId := strconv.Itoa(int(not.UserId))
-	_, err1 := clientR.SetData(context.Background(), &protobuf.SetRequest{Key: not.UserId, Value: not.Message})
+	check, err1 := clientR.SetData(context.Background(), &protobuf.SetRequest{Key: not.UserId, Value: not.Message})
 	if err1 != nil {
 		log.Println("Unable to send data to notification service", err1)
 		return nil, err1
 	}
+	log.Println("The response is ", check)
 
-	conn, err := grpc.Dial(":50020", grpc.WithInsecure())
+	conn, err := grpc.Dial("notification-service:50020", grpc.WithInsecure())
 	if err != nil {
 		log.Println("unable to dial to port 50020 - Notification service", err)
 		return nil, err
@@ -86,7 +87,7 @@ func CallNotificationService(not *protobuf.NotificationRequest) (*protobuf.Notif
 }
 
 func CallInventoryService(req *protobuf.StockUpdateRequest) (*protobuf.StockResponse, error) {
-	conn, err := grpc.Dial(":50051", grpc.WithInsecure())
+	conn, err := grpc.Dial("inventory-service:50051", grpc.WithInsecure())
 	if err != nil {
 		log.Println("unable to dial to port 50051 - Inventory service", err)
 		return nil, err

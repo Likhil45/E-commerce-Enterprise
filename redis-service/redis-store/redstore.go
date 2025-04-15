@@ -13,7 +13,7 @@ var ctx = context.Background()
 
 func RedInit() {
 	Rdb = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "redis:6379",
 		Password: "", // No password by default
 		DB:       0,  // Default DB
 	})

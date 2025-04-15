@@ -25,7 +25,7 @@ func CreateProduct(c *gin.Context) {
 	}
 	log.Println(prod)
 
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -52,7 +52,7 @@ func GetProduct(ctx *gin.Context) {
 		log.Println("Unable to convert to integer")
 	}
 	log.Println(id)
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -72,7 +72,7 @@ func GetProduct(ctx *gin.Context) {
 
 func GetAllProducts(ctx *gin.Context) {
 
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -97,7 +97,7 @@ func DeleteProduct(ctx *gin.Context) {
 		log.Println("Unable to convert to integer")
 	}
 
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -125,7 +125,7 @@ func UpdateProduct(ctx *gin.Context) {
 
 	}
 
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}

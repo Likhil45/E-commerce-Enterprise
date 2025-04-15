@@ -15,7 +15,7 @@ func main() {
 	if err != nil {
 		log.Println("Unable to Serve at port 5020", err)
 	}
-	conn, err := grpc.Dial(":50010", grpc.WithInsecure())
+	conn, err := grpc.Dial("redis-service:50010", grpc.WithInsecure())
 	if err != nil {
 		log.Println("Unable to dial to 50010 -redis", err)
 	}

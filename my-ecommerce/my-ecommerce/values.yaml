@@ -15,12 +15,12 @@ global:
 gateway-service:
   replicaCount: 2
   image:
-    repository: e-commerceplatform-gateway
+    repository: my-ecommerce/gateway-service
     tag: latest
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
-    port: 8086 # This is the crucial line
+    port: 8086
   env:
     DATABASE_URL: "user={{ .Values.global.database.user }} password={{ .Values.global.database.password }} dbname={{ .Values.global.database.dbname }} host={{ .Values.global.database.host }} port={{ .Values.global.database.port }} sslmode=disable"
     JWT_SECRET: "your-secret-key"
@@ -54,7 +54,60 @@ gateway-service:
 product-service:
   replicaCount: 3
   image:
-    repository: e-commerceplatform-producer-service
+    repository: my-ecommerce/product-service
     tag: latest
+    pullPolicy: IfNotPresent
   service:
+    type: ClusterIP
     port: 8081
+  env:
+    DATABASE_URL: "user={{ .Values.global.database.user }} password={{ .Values.global.database.password }} dbname={{ .Values.global.database.dbname }} host={{ .Values.global.database.host }} port={{ .Values.global.database.port }} sslmode=disable"
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+
+order-service:
+  replicaCount: 2
+  image:
+    repository: e-commerceplatform-order-service
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8082
+  env:
+    DATABASE_URL: "user={{ .Values.global.database.user }} password={{ .Values.global.database.password }} dbname={{ .Values.global.database.dbname }} host={{ .Values.global.database.host }} port={{ .Values.global.database.port }} sslmode=disable"
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "250m"
+      memory: "256Mi"
+
+kafka:
+  image: "bitnami/kafka:latest"
+  ports:
+    - containerPort: 9092
+  environment:
+    KAFKA_CFG_ZOOKEEPER_CONNECT: "zookeeper:2181"
+    KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092"
+    KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+
+redis:
+  image: "redis:7-alpine"
+  ports:
+    - containerPort: 6379
+
+zookeeper:
+  image: bitnami/zookeeper:latest
+  environment:
+    ALLOW_ANONYMOUS_LOGIN: "yes"
+  ports:
+    - "2181:2181"
+  networks:
+    - app_network

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	brokers := []string{"localhost:9092"}
+	brokers := []string{"kafka:9092"}
 	groupID := "ecommerce-consumer-group"
 	topics := []string{"OrderCreated", "OutOfStock", "InventoryReserved", "PaymentProcessed", "OrderConfirmed", "PaymentFailed"}
 

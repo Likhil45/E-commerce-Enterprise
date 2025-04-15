@@ -42,7 +42,7 @@ func CreateOrder(c *gin.Context) {
 	// Check stock availability
 	// grpcRequestI := &protobuf.StockRequest{ProductId: (req.ID)}
 
-	conn1, err2 := grpc.Dial(":50051", grpc.WithInsecure())
+	conn1, err2 := grpc.Dial("inventory-service:50051", grpc.WithInsecure())
 	if err2 != nil {
 		log.Fatalf("did not connect to Inventory Service: %v", err2)
 	}
@@ -53,7 +53,7 @@ func CreateOrder(c *gin.Context) {
 
 	//Checking product availability
 
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -167,7 +167,7 @@ func CreateOrder(c *gin.Context) {
 		grpcRequest := &protobuf.OrderRequest{OrderId: order.OrderID, UserId: order.UserID, TotalAmount: float32(order.TotalPrice), Items: items}
 
 		//Store in DB
-		conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+		conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 		if err != nil {
 			log.Fatalf("did not connect: %v", err)
 		}

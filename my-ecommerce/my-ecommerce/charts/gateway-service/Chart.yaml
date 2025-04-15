@@ -4,3 +4,32 @@ description: A Helm chart for the gateway service
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
+icon: "https://e7.pngegg.com/pngimages/492/729/png-clipart-monkey-d-luffy-one-piece-pirate-warriors-chibi-trafalgar-d-water-law-one-piece-chibi-child-hat-thumbnail.png"
+# dependencies:
+#   - name: gateway-service
+#     version: 1.2.3
+#     repository: my-ecommerce/gateway-service
+#   - name: product-service
+#     version: 4.5.6
+#     repository: https://example.com/charts
+#   - name: order-service
+#     version: 2.3.4
+#     repository: https://example.com/charts
+#   - name: inventory-service
+#     version: 3.4.5
+#     repository: https://example.com/charts
+#   - name: payment-service
+#     version: 1.0.0
+#     repository: https://example.com/charts
+#   - name: notification-service
+#     version: 1.1.0
+#     repository: https://example.com/charts
+#   - name: kafka
+#     version: 6.2.0
+#     repository: https://charts.bitnami.com/bitnami
+#   - name: redis
+#     version: 17.3.14
+#     repository: https://charts.bitnami.com/bitnami
+#   - name: zookeeper
+#     version: 6.3.1
+#     repository: https://charts.bitnami.com/bitnami

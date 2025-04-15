@@ -36,7 +36,7 @@ COPY --from=builder /app/inventory-service/inventory-service /app/inventory-serv
 RUN chmod +x /app/inventory-service
 
 # Expose the service port
-EXPOSE 50001
+EXPOSE 50051
 
 # Set timezone (optional)
 ENV TZ=UTC

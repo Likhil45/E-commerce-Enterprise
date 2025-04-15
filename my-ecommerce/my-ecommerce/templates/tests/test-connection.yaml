@@ -11,5 +11,5 @@ spec:
       command:
         - "wget"
       args:
-        - "{{ .Release.Name }}-gateway:{{ .Values.gateway-service.service.port | default 8080 }}" #Full templating.
+        - "{{ .Release.Name }}-gateway:{{ index .Values "gateway-service" "service" "port" | default 8080 }}"
   restartPolicy: Never

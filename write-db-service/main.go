@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// Set up gRPC connection to Kafka Producer Service
-	kafkaConn, err := grpc.Dial("localhost:50052", grpc.WithInsecure()) // Change to Kafka Producer's actual address
+	kafkaConn, err := grpc.Dial("producer-service:50052", grpc.WithInsecure()) // Change to Kafka Producer's actual address
 	if err != nil {
 		log.Fatalf("Failed to connect to Kafka Producer Service: %v", err)
 	}
@@ -70,6 +70,7 @@ func (w *writeDB) RegisterUser(ctx context.Context, req *protobuf.RegisterUserRe
 	// if req.PaymentDetails == nil {
 	// 	return nil, fmt.Errorf("PaymentDetails cannot be nil")
 	// }
+	log.Println("Inside the Register user ")
 	var user models.User
 	user.Email = req.GetEmail()
 	user.ID = (req.GetUserId())

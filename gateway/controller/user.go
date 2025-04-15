@@ -36,9 +36,10 @@ func CreateUser(c *gin.Context) {
 
 		// You can now process the payment details further if needed
 	}
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
+		log.Println("Unable to connect to database")
 	}
 	defer conn.Close()
 	grpcRequest := &protobuf.RegisterUserRequest{
@@ -46,9 +47,10 @@ func CreateUser(c *gin.Context) {
 	}
 	client := protobuf.NewUserServiceClient(conn)
 
-	response, err := client.RegisterUser(context.Background(), grpcRequest)
+	response, err := client.RegisterUser(c, grpcRequest)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("gRPC error: %v", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("gRPC error in user signup: %v", err)})
+		log.Println("Unable to use register user service")
 		return
 	}
 	c.JSON(http.StatusOK, response)
@@ -65,7 +67,7 @@ func Login(ctx *gin.Context) {
 		return
 	}
 
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -94,7 +96,7 @@ func GetUser(ctx *gin.Context) {
 		log.Println("Unable to convert to integer")
 	}
 	log.Println(id)
-	conn, err := grpc.Dial(":50001", grpc.WithInsecure())
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}

@@ -15,7 +15,7 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	kafkaProducer, err := handlers.NewKafkaProducer([]string{"localhost:9092"})
+	kafkaProducer, err := handlers.NewKafkaProducer([]string{"kafka:9092"})
 	if err != nil {
 		log.Fatalf("Failed to initialize Kafka producer: %v", err)
 	}

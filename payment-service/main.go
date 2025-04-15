@@ -14,14 +14,14 @@ func main() {
 	if err != nil {
 		log.Println("Unable to connect to port 50080", err)
 	}
-	kafkaconn, err1 := grpc.Dial(":50052", grpc.WithInsecure())
+	kafkaconn, err1 := grpc.Dial("producer-service:50052", grpc.WithInsecure())
 	if err1 != nil {
 		log.Println("unable to connect to Kafka producer at port 50052", err)
 	}
 	defer kafkaconn.Close()
 	kafkaClient := protobuf.NewKafkaProducerServiceClient(kafkaconn)
 
-	Userconn, err1 := grpc.Dial(":50001", grpc.WithInsecure())
+	Userconn, err1 := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
 	if err1 != nil {
 		log.Println("unable to connect to User Service at port 50001", err)
 	}

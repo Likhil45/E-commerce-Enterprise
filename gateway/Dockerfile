@@ -36,7 +36,7 @@ COPY --from=builder /app/gateway/gateway /app/gateway
 RUN chmod +x /app/gateway
 
 # Expose the service port
-EXPOSE 50001
+EXPOSE 8080
 
 # Set timezone (optional)
 ENV TZ=UTC

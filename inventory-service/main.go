@@ -14,7 +14,7 @@ import (
 
 func main() {
 	// Connect to Database Service
-	dbConn, err := grpc.Dial("localhost:50001", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	dbConn, err := grpc.Dial("write-db-service:50001", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect to Database Service: %v", err)
 	}
@@ -22,7 +22,7 @@ func main() {
 	dbClient := protobuf.NewDatabaseServiceClient(dbConn)
 
 	// Connect to Kafka Producer Service
-	kafkaConn, err := grpc.Dial("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	kafkaConn, err := grpc.Dial("producer-service:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect to Kafka Producer Service: %v", err)
 	}
