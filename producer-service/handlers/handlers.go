@@ -2,18 +2,41 @@ package handlers
 
 import (
 	"context"
+	"e-commerce/logger"
 	"e-commerce/protobuf/protobuf"
 	"fmt"
-	"log"
 
 	"github.com/IBM/sarama"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var (
+	KafkaMessagesPublished = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "kafka_messages_published_total",
+			Help: "Total number of Kafka messages published",
+		},
+		[]string{"topic", "status"},
+	)
+
+	GrpcCallsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "grpc_calls_total",
+			Help: "Total number of gRPC calls made to the producer-service",
+		},
+		[]string{"method", "status"},
+	)
+)
+
+func Init() {
+	prometheus.MustRegister(KafkaMessagesPublished)
+	prometheus.MustRegister(GrpcCallsTotal)
+}
 
 // KafkaProducerService handles gRPC requests and sends messages to Kafka
 type KafkaProducerService struct {
 	protobuf.UnimplementedKafkaProducerServiceServer
 	producer sarama.SyncProducer
-	// topic    string
 }
 
 // NewKafkaProducer initializes the Kafka producer
@@ -25,51 +48,44 @@ func NewKafkaProducer(brokers []string) (*KafkaProducerService, error) {
 
 	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
-		log.Printf("Failed to start Kafka producer: %v", err)
+		logger.Logger.Errorf("Failed to start Kafka producer: %v", err)
 		return nil, err
 	}
 
+	logger.Logger.Info("Kafka producer initialized successfully")
 	return &KafkaProducerService{producer: producer}, nil
 }
 
 // PublishMessage receives gRPC requests and sends events to Kafka
 func (p *KafkaProducerService) PublishMessage(ctx context.Context, req *protobuf.PublishRequest) (*protobuf.PublishResponse, error) {
+	logger.Logger.Infof("Received PublishMessage request: Topic=%s, EventType=%s", req.Topic, req.EventType)
 
-	//Validate Topic name
-	// if req.Topic == "" {
-	// 	err := fmt.Errorf("invalid Kafka topic: topic name is empty")
-	// 	log.Println("❌", err)
-	// 	return nil, err
-	// }
-
+	// Validate EventType
 	if req.EventType == "" {
 		err := fmt.Errorf("invalid Kafka event type: event type is empty")
-		log.Println("❌", err)
+		logger.Logger.Errorf("Validation failed: %v", err)
+		GrpcCallsTotal.WithLabelValues("PublishMessage", "failed").Inc()
 		return nil, err
 	}
-
-	log.Println(req.EventType)
 
 	msg := &sarama.ProducerMessage{
 		Topic: req.Topic,
 		Key:   sarama.StringEncoder(req.EventType),
 		Value: sarama.StringEncoder(req.Message),
 	}
+	logger.Logger.Infof("Preparing to send message to Kafka: Topic=%s, EventType=%s", req.Topic, req.EventType)
 
 	partition, offset, err := p.producer.SendMessage(msg)
-	log.Printf("Order is stored in topic(%s)/partition(%d)/offset(%d)\n",
-		msg.Topic,
-		partition,
-		offset)
 	if err != nil {
-		log.Printf("Failed to publish message: %v", err)
+		logger.Logger.Errorf("Failed to publish message to Kafka: Topic=%s, EventType=%s, Error=%v", req.Topic, req.EventType, err)
+		KafkaMessagesPublished.WithLabelValues(req.Topic, "failed").Inc()
+		GrpcCallsTotal.WithLabelValues("PublishMessage", "failed").Inc()
 		return nil, err
 	}
-	log.Printf("Order is stored in topic(%s)/partition(%d)/offset(%d)\n",
-		msg.Topic,
-		partition,
-		offset)
-	log.Printf("Published event: %s", req.EventType)
+
+	logger.Logger.Infof("Message published to Kafka successfully: Topic=%s, Partition=%d, Offset=%d", msg.Topic, partition, offset)
+	KafkaMessagesPublished.WithLabelValues(req.Topic, "success").Inc()
+	GrpcCallsTotal.WithLabelValues("PublishMessage", "success").Inc()
 
 	return &protobuf.PublishResponse{Status: "Message sent to Kafka"}, nil
 }

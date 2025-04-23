@@ -10,8 +10,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )
+
+var ordersCreatedTotal = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "orders_created_total",
+		Help: "Total number of orders created",
+	},
+)
+
+func init() {
+	prometheus.MustRegister(ordersCreatedTotal)
+}
 
 // type OrderHandler struct {
 // 	protobuf.UnimplementedOrderServiceServer
@@ -37,6 +49,10 @@ func CreateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+
+	// Increment the custom metric
+	ordersCreatedTotal.Inc()
+
 	log.Println(req.OrderItems)
 
 	// Check stock availability
@@ -181,7 +197,7 @@ func CreateOrder(c *gin.Context) {
 			log.Println("grpc error", err)
 			return
 		}
-		c.JSON(http.StatusCreated, gin.H{"status": "success", "data": response})
+		c.JSON(http.StatusCreated, gin.H{"status": order.Status, "data": response})
 
 		// Publish OrderCreated event to Kafka
 		// Connect to Kafka Producer Service

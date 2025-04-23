@@ -2,9 +2,9 @@ package services
 
 import (
 	"context"
+	"e-commerce/logger"
 	"e-commerce/models"
 	"e-commerce/protobuf/protobuf"
-
 	"e-commerce/write-db-service/store"
 	"encoding/json"
 	"fmt"
@@ -24,14 +24,14 @@ func NewOrderService(kafkaClient protobuf.KafkaProducerServiceClient) *OrderServ
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, req *protobuf.OrderRequest) (*protobuf.OrderResponse, error) {
+	logger.Logger.Infof("Received CreateOrder request: %+v", req)
 
 	order := models.Order{
-
-		UserID: (req.UserId),
+		UserID:  req.UserId,
+		OrderID: req.OrderId,
 	}
 
 	for _, item := range req.Items {
-
 		order.OrderItems = append(order.OrderItems, models.OrderItem{
 			ProductID: uint32(item.ProductId),
 			Quantity:  uint(item.Quantity),
@@ -41,45 +41,26 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *protobuf.OrderReque
 	}
 	order.TotalPrice = float64(req.TotalAmount)
 
-	log.Println("Checking order before inserting to DB", order)
+	logger.Logger.Infof("Preparing to insert order into DB: %+v", order)
+	log.Printf("\nPreparing to insert order into DB: %+v", order)
 
 	// Insert order with conflict handling
 	if err := store.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "order_id"}},
-		DoNothing: true, // ✅ Ignores duplicate inserts
+		DoNothing: true, // Ignores duplicate inserts
 	}).Create(&order).Error; err != nil {
-		log.Println("Unable to create record", err)
+		logger.Logger.Errorf("Failed to create order in DB: %v", err)
 		return nil, err
 	}
-	log.Println(order)
-
-	// //Check order availability
-	// for _, val := range req.Items {
-
-	// 	grpcRequestI := &protobuf.StockRequest{ProductId: uint32(val.ProductId)}
-
-	// 	conn1, err2 := grpc.Dial(":50001", grpc.WithInsecure())
-	// 	if err2 != nil {
-	// 		log.Fatalf("did not connect: %v", err2)
-	// 	}
-	// 	defer conn1.Close()
-	// 	client1 := protobuf.NewInventoryServiceClient(conn1)
-
-	// 	res, err4 := client1.TrackStock(ctx, grpcRequestI)
-	// 	if err4 != nil || res.Quantity < uint32(val.Quantity) {
-	// 		// c.JSON(http.StatusConflict, gin.H{"error": "Insufficient stock"})
-	// 		log.Println("Stock not available", err4)
-	// 		break
-	// 	}
-
-	// }
+	logger.Logger.Infof("Order created successfully in DB: %+v", order)
 
 	// Publish OrderCreated event to Kafka
-	orderJSON, err4 := json.Marshal(req)
-	if err4 != nil {
-		log.Println("Unable to Marshal json", err4)
-
+	orderJSON, err := json.Marshal(req)
+	if err != nil {
+		logger.Logger.Errorf("Failed to marshal order to JSON: %v", err)
+		return nil, err
 	}
+
 	kafkaReq := &protobuf.PublishRequest{
 		Topic:     "OrderCreated",
 		EventType: "Orders",
@@ -87,11 +68,12 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *protobuf.OrderReque
 	}
 
 	// Call Kafka Producer Service via gRPC
-	_, err := s.KafkaClient.PublishMessage(ctx, kafkaReq)
+	_, err = s.KafkaClient.PublishMessage(ctx, kafkaReq)
 	if err != nil {
-		log.Printf("Failed to publish message to Kafka Producer Service: %v", err)
+		logger.Logger.Errorf("Failed to publish message to Kafka Producer Service: %v", err)
 		return nil, err
 	}
+	logger.Logger.Infof("OrderCreated event published to Kafka successfully: %+v", kafkaReq)
 
 	return &protobuf.OrderResponse{
 		OrderId:     req.OrderId,
@@ -102,8 +84,11 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *protobuf.OrderReque
 }
 
 func (s *OrderService) GetOrder(ctx context.Context, req *protobuf.OrderIDRequest) (*protobuf.OrderResponse, error) {
+	logger.Logger.Infof("Received GetOrder request: OrderID=%d", req.OrderId)
+
 	var order models.Order
 	if err := store.DB.Preload("Items").Where("id = ?", req.OrderId).First(&order).Error; err != nil {
+		logger.Logger.Errorf("Failed to fetch order from DB: OrderID=%d, Error=%v", req.OrderId, err)
 		return nil, err
 	}
 
@@ -116,17 +101,21 @@ func (s *OrderService) GetOrder(ctx context.Context, req *protobuf.OrderIDReques
 		})
 	}
 
+	logger.Logger.Infof("Order fetched successfully: %+v", order)
 	return &protobuf.OrderResponse{
 		OrderId:     uint32(order.OrderID),
-		UserId:      (order.UserID),
+		UserId:      order.UserID,
 		Items:       items,
 		TotalAmount: float32(order.TotalPrice),
 	}, nil
 }
 
 func (s *OrderService) ListOrders(ctx context.Context, req *protobuf.Empty) (*protobuf.OrderListResponse, error) {
+	logger.Logger.Info("Received ListOrders request")
+
 	var orders []models.Order
 	if err := store.DB.Preload("Items").Find(&orders).Error; err != nil {
+		logger.Logger.Errorf("Failed to fetch orders from DB: %v", err)
 		return nil, err
 	}
 
@@ -142,23 +131,30 @@ func (s *OrderService) ListOrders(ctx context.Context, req *protobuf.Empty) (*pr
 		}
 		orderResponses = append(orderResponses, &protobuf.OrderResponse{
 			OrderId:     uint32(order.OrderID),
-			UserId:      (order.UserID),
+			UserId:      order.UserID,
 			Items:       items,
 			TotalAmount: float32(order.TotalPrice),
 		})
 	}
 
+	logger.Logger.Infof("Orders fetched successfully: TotalOrders=%d", len(orderResponses))
 	return &protobuf.OrderListResponse{Orders: orderResponses}, nil
 }
 
 func (s *OrderService) UpdateOrder(ctx context.Context, req *protobuf.OrderRequest) (*protobuf.OrderResponse, error) {
+	logger.Logger.Infof("Received UpdateOrder request: %+v", req)
+
 	var order models.Order
 	if err := store.DB.Where("id = ?", req.OrderId).First(&order).Error; err != nil {
+		logger.Logger.Errorf("Failed to fetch order for update: OrderID=%d, Error=%v", req.OrderId, err)
 		return nil, err
 	}
 
 	order.TotalPrice = float64(req.TotalAmount)
-	store.DB.Save(&order)
+	if err := store.DB.Save(&order).Error; err != nil {
+		logger.Logger.Errorf("Failed to update order in DB: OrderID=%d, Error=%v", req.OrderId, err)
+		return nil, err
+	}
 
 	// Publish OrderUpdated event to Kafka
 	orderJSON, _ := json.Marshal(req)
@@ -170,9 +166,10 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *protobuf.OrderReque
 
 	_, err := s.KafkaClient.PublishMessage(ctx, kafkaReq)
 	if err != nil {
-		log.Printf("Failed to publish update event: %v", err)
+		logger.Logger.Errorf("Failed to publish OrderUpdated event: %v", err)
 		return nil, err
 	}
+	logger.Logger.Infof("OrderUpdated event published successfully: %+v", kafkaReq)
 
 	return &protobuf.OrderResponse{
 		OrderId:     req.OrderId,
@@ -180,10 +177,15 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *protobuf.OrderReque
 		TotalAmount: req.TotalAmount,
 	}, nil
 }
+
 func (s *OrderService) DeleteOrder(ctx context.Context, req *protobuf.OrderIDRequest) (*protobuf.Empty, error) {
+	logger.Logger.Infof("Received DeleteOrder request: OrderID=%d", req.OrderId)
+
 	if err := store.DB.Where("id = ?", req.OrderId).Delete(&models.Order{}).Error; err != nil {
+		logger.Logger.Errorf("Failed to delete order from DB: OrderID=%d, Error=%v", req.OrderId, err)
 		return nil, err
 	}
+
 	// Publish OrderDeleted event to Kafka
 	kafkaReq := &protobuf.PublishRequest{
 		Topic:     "Orders",
@@ -193,8 +195,10 @@ func (s *OrderService) DeleteOrder(ctx context.Context, req *protobuf.OrderIDReq
 
 	_, err := s.KafkaClient.PublishMessage(ctx, kafkaReq)
 	if err != nil {
-		log.Printf("Failed to publish delete event: %v", err)
+		logger.Logger.Errorf("Failed to publish OrderDeleted event: %v", err)
 		return nil, err
 	}
+	logger.Logger.Infof("OrderDeleted event published successfully: %+v", kafkaReq)
+
 	return &protobuf.Empty{}, nil
 }

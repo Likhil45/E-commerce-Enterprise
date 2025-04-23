@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s # How often to scrape targets by default.
+
+scrape_configs:
+  - job_name: "write-db-service"
+    static_configs:
+      - targets: ["write-db-service:8001"]
+
+  - job_name: "redis-service"
+    static_configs:
+      - targets: ["redis-service:8015"]
+
+  - job_name: "payment-service"
+    static_configs:
+      - targets: ["payment-service:8005"]
+
+  - job_name: "inventory-service"
+    static_configs:
+      - targets: ["inventory-service:8013"]
+
+  - job_name: "notification-service"
+    static_configs:
+      - targets: ["notification-service:8006"]
+
+  - job_name: "consumer-service"
+    static_configs:
+      - targets: ["consumer-service:8017"]
+
+  - job_name: "producer-service"
+    static_configs:
+      - targets: ["producer-service:8007"]
+  
+  - job_name: "order-service"
+    static_configs:
+      - targets: ["order-service:8083"]
+
+  - job_name: "gateway"
+    static_configs:
+      - targets: ["gateway:8080"]
+  
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']

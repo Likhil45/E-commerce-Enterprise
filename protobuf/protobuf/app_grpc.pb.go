@@ -23,6 +23,7 @@ const (
 	UserService_AuthenticateUser_FullMethodName      = "/UserService/AuthenticateUser"
 	UserService_GetUser_FullMethodName               = "/UserService/GetUser"
 	UserService_GetUserPaymentDetails_FullMethodName = "/UserService/GetUserPaymentDetails"
+	UserService_AddPaymentDetails_FullMethodName     = "/UserService/AddPaymentDetails"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -35,6 +36,7 @@ type UserServiceClient interface {
 	AuthenticateUser(ctx context.Context, in *AuthenticateUserRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	GetUserPaymentDetails(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*UserPaymentResponse, error)
+	AddPaymentDetails(ctx context.Context, in *AddPaymentDetailsRequest, opts ...grpc.CallOption) (*AddPaymentDetailsResponse, error)
 }
 
 type userServiceClient struct {
@@ -85,6 +87,16 @@ func (c *userServiceClient) GetUserPaymentDetails(ctx context.Context, in *GetUs
 	return out, nil
 }
 
+func (c *userServiceClient) AddPaymentDetails(ctx context.Context, in *AddPaymentDetailsRequest, opts ...grpc.CallOption) (*AddPaymentDetailsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddPaymentDetailsResponse)
+	err := c.cc.Invoke(ctx, UserService_AddPaymentDetails_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -95,6 +107,7 @@ type UserServiceServer interface {
 	AuthenticateUser(context.Context, *AuthenticateUserRequest) (*AuthResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*UserResponse, error)
 	GetUserPaymentDetails(context.Context, *GetUserRequest) (*UserPaymentResponse, error)
+	AddPaymentDetails(context.Context, *AddPaymentDetailsRequest) (*AddPaymentDetailsResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -116,6 +129,9 @@ func (UnimplementedUserServiceServer) GetUser(context.Context, *GetUserRequest) 
 }
 func (UnimplementedUserServiceServer) GetUserPaymentDetails(context.Context, *GetUserRequest) (*UserPaymentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserPaymentDetails not implemented")
+}
+func (UnimplementedUserServiceServer) AddPaymentDetails(context.Context, *AddPaymentDetailsRequest) (*AddPaymentDetailsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddPaymentDetails not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -210,6 +226,24 @@ func _UserService_GetUserPaymentDetails_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_AddPaymentDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddPaymentDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).AddPaymentDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_AddPaymentDetails_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).AddPaymentDetails(ctx, req.(*AddPaymentDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +266,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserPaymentDetails",
 			Handler:    _UserService_GetUserPaymentDetails_Handler,
+		},
+		{
+			MethodName: "AddPaymentDetails",
+			Handler:    _UserService_AddPaymentDetails_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1293,8 +1331,8 @@ var AuditService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	OrderTrackingService_TrackOrder_FullMethodName   = "/OrderTrackingService/TrackOrder"
-	OrderTrackingService_SearchOrders_FullMethodName = "/OrderTrackingService/SearchOrders"
+	OrderTrackingService_SearchOrders_FullMethodName     = "/OrderTrackingService/SearchOrders"
+	OrderTrackingService_GetOrderTracking_FullMethodName = "/OrderTrackingService/GetOrderTracking"
 )
 
 // OrderTrackingServiceClient is the client API for OrderTrackingService service.
@@ -1303,8 +1341,10 @@ const (
 //
 // Order Tracking & Search Service
 type OrderTrackingServiceClient interface {
-	TrackOrder(ctx context.Context, in *OrderTrackingRequest, opts ...grpc.CallOption) (*OrderTrackingResponse, error)
-	SearchOrders(ctx context.Context, in *OrderSearchRequest, opts ...grpc.CallOption) (*OrderSearchResponse, error)
+	// Search orders based on user ID, product ID, date range, and status
+	SearchOrders(ctx context.Context, in *SearchOrdersRequest, opts ...grpc.CallOption) (*SearchOrdersResponse, error)
+	// Get real-time tracking updates for an order
+	GetOrderTracking(ctx context.Context, in *OrderTrackingRequest, opts ...grpc.CallOption) (*OrderTrackingResponse, error)
 }
 
 type orderTrackingServiceClient struct {
@@ -1315,20 +1355,20 @@ func NewOrderTrackingServiceClient(cc grpc.ClientConnInterface) OrderTrackingSer
 	return &orderTrackingServiceClient{cc}
 }
 
-func (c *orderTrackingServiceClient) TrackOrder(ctx context.Context, in *OrderTrackingRequest, opts ...grpc.CallOption) (*OrderTrackingResponse, error) {
+func (c *orderTrackingServiceClient) SearchOrders(ctx context.Context, in *SearchOrdersRequest, opts ...grpc.CallOption) (*SearchOrdersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrderTrackingResponse)
-	err := c.cc.Invoke(ctx, OrderTrackingService_TrackOrder_FullMethodName, in, out, cOpts...)
+	out := new(SearchOrdersResponse)
+	err := c.cc.Invoke(ctx, OrderTrackingService_SearchOrders_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *orderTrackingServiceClient) SearchOrders(ctx context.Context, in *OrderSearchRequest, opts ...grpc.CallOption) (*OrderSearchResponse, error) {
+func (c *orderTrackingServiceClient) GetOrderTracking(ctx context.Context, in *OrderTrackingRequest, opts ...grpc.CallOption) (*OrderTrackingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrderSearchResponse)
-	err := c.cc.Invoke(ctx, OrderTrackingService_SearchOrders_FullMethodName, in, out, cOpts...)
+	out := new(OrderTrackingResponse)
+	err := c.cc.Invoke(ctx, OrderTrackingService_GetOrderTracking_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1341,8 +1381,10 @@ func (c *orderTrackingServiceClient) SearchOrders(ctx context.Context, in *Order
 //
 // Order Tracking & Search Service
 type OrderTrackingServiceServer interface {
-	TrackOrder(context.Context, *OrderTrackingRequest) (*OrderTrackingResponse, error)
-	SearchOrders(context.Context, *OrderSearchRequest) (*OrderSearchResponse, error)
+	// Search orders based on user ID, product ID, date range, and status
+	SearchOrders(context.Context, *SearchOrdersRequest) (*SearchOrdersResponse, error)
+	// Get real-time tracking updates for an order
+	GetOrderTracking(context.Context, *OrderTrackingRequest) (*OrderTrackingResponse, error)
 	mustEmbedUnimplementedOrderTrackingServiceServer()
 }
 
@@ -1353,11 +1395,11 @@ type OrderTrackingServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOrderTrackingServiceServer struct{}
 
-func (UnimplementedOrderTrackingServiceServer) TrackOrder(context.Context, *OrderTrackingRequest) (*OrderTrackingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TrackOrder not implemented")
-}
-func (UnimplementedOrderTrackingServiceServer) SearchOrders(context.Context, *OrderSearchRequest) (*OrderSearchResponse, error) {
+func (UnimplementedOrderTrackingServiceServer) SearchOrders(context.Context, *SearchOrdersRequest) (*SearchOrdersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchOrders not implemented")
+}
+func (UnimplementedOrderTrackingServiceServer) GetOrderTracking(context.Context, *OrderTrackingRequest) (*OrderTrackingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOrderTracking not implemented")
 }
 func (UnimplementedOrderTrackingServiceServer) mustEmbedUnimplementedOrderTrackingServiceServer() {}
 func (UnimplementedOrderTrackingServiceServer) testEmbeddedByValue()                              {}
@@ -1380,26 +1422,8 @@ func RegisterOrderTrackingServiceServer(s grpc.ServiceRegistrar, srv OrderTracki
 	s.RegisterService(&OrderTrackingService_ServiceDesc, srv)
 }
 
-func _OrderTrackingService_TrackOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OrderTrackingRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OrderTrackingServiceServer).TrackOrder(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OrderTrackingService_TrackOrder_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderTrackingServiceServer).TrackOrder(ctx, req.(*OrderTrackingRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _OrderTrackingService_SearchOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OrderSearchRequest)
+	in := new(SearchOrdersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1411,7 +1435,25 @@ func _OrderTrackingService_SearchOrders_Handler(srv interface{}, ctx context.Con
 		FullMethod: OrderTrackingService_SearchOrders_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderTrackingServiceServer).SearchOrders(ctx, req.(*OrderSearchRequest))
+		return srv.(OrderTrackingServiceServer).SearchOrders(ctx, req.(*SearchOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrderTrackingService_GetOrderTracking_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OrderTrackingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderTrackingServiceServer).GetOrderTracking(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderTrackingService_GetOrderTracking_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderTrackingServiceServer).GetOrderTracking(ctx, req.(*OrderTrackingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1424,12 +1466,12 @@ var OrderTrackingService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*OrderTrackingServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "TrackOrder",
-			Handler:    _OrderTrackingService_TrackOrder_Handler,
-		},
-		{
 			MethodName: "SearchOrders",
 			Handler:    _OrderTrackingService_SearchOrders_Handler,
+		},
+		{
+			MethodName: "GetOrderTracking",
+			Handler:    _OrderTrackingService_GetOrderTracking_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -1,10 +1,10 @@
 package controller
 
 import (
+	"e-commerce/logger"
 	"e-commerce/models"
 	"e-commerce/protobuf/protobuf"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,150 +14,93 @@ import (
 
 func CreateOrder(c *gin.Context) {
 	var req models.Order
-	userID, errb := c.Get("userID")
-	log.Println(userID, errb)
-
-	if !errb {
-		log.Println("Unable to retrieve the userid from jwt token")
+	userID, exists := c.Get("userID")
+	if !exists {
+		logger.Logger.Error("Unable to retrieve the userID from JWT token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
 		return
 	}
-	// Convert userID to string (if needed)
-	user_id, ok := userID.(string)
+
+	// Convert userID to string
+	userIDStr, ok := userID.(string)
 	if !ok {
+		logger.Logger.Error("Invalid user ID format")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
 		return
 	}
-	// user_id, errs := strconv.Atoi(userIDStr)
-	// if errs != nil {
-	// 	log.Println("Unable to convert to integer")
-	// }
-	req.UserID = (user_id)
+	req.UserID = userIDStr
 
-	// Create an order
-
-	fmt.Println("Creating Order...")
-
+	logger.Logger.Infof("Creating order for UserID=%s", userIDStr)
+	orderID := uuid.New().ID()
+	req.OrderID = orderID
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		logger.Logger.Errorf("Invalid request payload: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
-	log.Println(req.OrderItems)
+	logger.Logger.Infof("Order request payload: %+v", req)
 
-	// Check stock availability
-	// grpcRequestI := &protobuf.StockRequest{ProductId: (req.ID)}
-
-	conn1, err2 := grpc.Dial("inventory-service:50051", grpc.WithInsecure())
-	if err2 != nil {
-		log.Fatalf("did not connect to Inventory Service: %v", err2)
-	}
-	defer conn1.Close()
-	client1 := protobuf.NewInventoryServiceClient(conn1)
-
-	// res, err4 := client1.TrackStock(c, grpcRequestI)
-
-	//Checking product availability
-
-	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
+	// Connect to Inventory Service
+	connInventory, err := grpc.Dial("inventory-service:50051", grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		logger.Logger.Fatalf("Failed to connect to Inventory Service: %v", err)
 	}
-	defer conn.Close()
-	for _, prod := range req.OrderItems {
+	defer connInventory.Close()
+	inventoryClient := protobuf.NewInventoryServiceClient(connInventory)
 
+	// Check product availability
+	connDB, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
+	if err != nil {
+		logger.Logger.Fatalf("Failed to connect to Write-DB Service: %v", err)
+	}
+	defer connDB.Close()
+	productClient := protobuf.NewProductServiceClient(connDB)
+
+	for _, prod := range req.OrderItems {
 		grpcRequest := &protobuf.ProductIDRequest{
 			ProductId: uint32(prod.ProductID),
 		}
-		client := protobuf.NewProductServiceClient(conn)
 
-		_, err := client.GetProduct(c, grpcRequest)
+		_, err := productClient.GetProduct(c, grpcRequest)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("\ngRPC error for fetching product id: %d: %v", prod.ProductID, err)})
-			log.Printf("\nUnable to get product details from order items product %d", prod.ProductID)
+			logger.Logger.Errorf("Failed to fetch product details for ProductID=%d: %v", prod.ProductID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to fetch product details for ProductID=%d", prod.ProductID)})
 			return
 		}
-
 	}
 
-	//Checking product stock availability
+	// Check product stock availability
 	var reserved int32
-	for _, val := range req.OrderItems {
-		grpcRequestI := &protobuf.StockUpdateRequest{ProductId: (val.ProductID), Quantity: uint32(val.Quantity)}
+	for _, item := range req.OrderItems {
+		grpcRequest := &protobuf.StockUpdateRequest{
+			ProductId: uint32(item.ProductID),
+			Quantity:  uint32(item.Quantity),
+		}
 
-		res, err := client1.UpdateStock(c, grpcRequestI)
+		res, err := inventoryClient.UpdateStock(c, grpcRequest)
 		if err != nil {
-			log.Println("Unable to update the stock", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err, "Reason": "Unable to update the stock"})
+			logger.Logger.Errorf("Failed to update stock for ProductID=%d: %v", item.ProductID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update stock"})
 			return
 		}
 
-		// // Check if sufficient stock is available
-		// if res.Status == "Insufficient Stock" {
-		// 	// If out of stock, publish OutOfStock event
-		// 	event := map[string]interface{}{
-		// 		"product_id": val.ProductID,
-
-		// 	}
-		// 	eventJSON, err := json.Marshal(event)
-		// 	if err != nil {
-		// 		log.Println("Error marshalling OutOfStock event:", err)
-		// 	} else {
-		// 		s.kafkaClient.PublishMessage(c, &protobuf.PublishRequest{Topic: "Orders", EventType: "OutOfStock", Message: string(eventJSON)})
-		// 	}
-
-		// }
-		// Send InventoryReserved event
-
-		// var order models.Order
-
-		// eventJSON, err := json.Marshal(&order)
-		// if err != nil {
-		// 	log.Println("Error marshalling InventoryReserved event:", err)
-		// } else {
-		// 	s.kafkaClient.PublishMessage(ctx, &protobuf.PublishRequest{EventType: "InventoryReserved", Message: string(eventJSON)})
-		// }
-		// return &protobuf.StockResponse{ProductId: req.ProductId, Quantity: res.Q, Status: "InventoryReserved"}, nil
-
-		//Checking status
 		if res.Status == "Not Found" {
-			log.Printf("\nNo product foud with this product id: %v", val.ProductID)
-			c.JSON(http.StatusInternalServerError, gin.H{"response": res})
-
+			logger.Logger.Warnf("Product not found for ProductID=%d", item.ProductID)
+			c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
+			return
 		} else if res.Status == "Insufficient Stock" {
-			log.Printf("\nInsufficient stock for this product id: %v", val.ProductID)
-			c.JSON(http.StatusOK, res)
+			logger.Logger.Warnf("Insufficient stock for ProductID=%d", item.ProductID)
+			c.JSON(http.StatusConflict, gin.H{"error": "Insufficient stock"})
+			return
 		} else {
-			log.Printf("\n Updated stock for this product id: %v", val.ProductID)
-			c.JSON(http.StatusOK, gin.H{"response": res, "msg": "Updated stock for this product"})
+			logger.Logger.Infof("Stock updated successfully for ProductID=%d", item.ProductID)
 			reserved = 1
 		}
-		// conn1, err2 := grpc.Dial(":50052", grpc.WithInsecure())
-		// if err2 != nil {
-		// 	log.Fatalf("did not connect to producer: %v", err2)
-		// }
-		// defer conn1.Close()
-		// grpcRequestK := &protobuf.PublishRequest{Topic: "Orders", EventType: "InventoryReserved", Message: ""}
-		// client1 := protobuf.NewKafkaProducerServiceClient(conn1)
-		// _, err := client1.PublishMessage(c, grpcRequestK)
-		// if err4 != nil || res.Quantity < uint32(val.Quantity) {
-		// 	c.JSON(http.StatusConflict, gin.H{"error": "Insufficient stock", "product": val})
-		// 	return
-		// }
-
-		// stockResp, err := h.InventorySvc.TrackStock(context.Background(), &protobuf.StockRequest{ProductId: (val.Quantity)})
-		// if err != nil || stockResp.Quantity < int32(val.Quantity) {
-		// 	c.JSON(http.StatusConflict, gin.H{"error": "Insufficient stock"})
-		// 	return
-		// }
-
 	}
 
 	if reserved == 1 {
-
 		// Create order in DB
-		var order models.Order
-		id := uuid.New().ID()
-		order.OrderID = id
-		order.UserID = req.UserID
+
 		var items []*protobuf.OrderItem
 		for _, item := range req.OrderItems {
 			items = append(items, &protobuf.OrderItem{
@@ -166,26 +109,70 @@ func CreateOrder(c *gin.Context) {
 				Price:     float32(item.Price),
 			})
 		}
-		log.Println(items)
 
-		grpcRequest := &protobuf.OrderRequest{OrderId: order.OrderID, UserId: order.UserID, TotalAmount: float32(order.TotalPrice), Items: items}
-
-		//Store in DB
-		conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
-		if err != nil {
-			log.Fatalf("did not connect: %v", err)
+		orderRequest := &protobuf.OrderRequest{
+			OrderId:     req.OrderID,
+			UserId:      req.UserID,
+			TotalAmount: float32(req.TotalPrice),
+			Items:       items,
 		}
-		log.Println("Connetected to DB")
-		defer conn.Close()
-		client := protobuf.NewOrderServiceClient(conn)
 
-		response, err := client.CreateOrder(c, grpcRequest)
+		orderClient := protobuf.NewOrderServiceClient(connDB)
+		response, err := orderClient.CreateOrder(c, orderRequest)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("gRPC error: %v", err)})
-			log.Println("grpc error", err)
+			logger.Logger.Errorf("Failed to create order: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create order"})
 			return
 		}
-		c.JSON(http.StatusCreated, gin.H{"status": "success", "data": response})
 
+		logger.Logger.Infof("Order created successfully: %+v", response)
+		c.JSON(http.StatusCreated, gin.H{"status": req.Status, "data": response})
 	}
+}
+
+func GetOrder(c *gin.Context) {
+	var orderID struct {
+		OrderId uint32 `json:"order_id"`
+	}
+	if err := c.ShouldBindJSON(&orderID); err != nil {
+		logger.Logger.Errorf("Invalid request payload: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	conn, err := grpc.Dial("write-db-service:50001", grpc.WithInsecure())
+	if err != nil {
+		logger.Logger.Fatalf("Failed to connect to Write-DB Service: %v", err)
+	}
+	defer conn.Close()
+
+	orderClient := protobuf.NewOrderServiceClient(conn)
+	grpcRequest := &protobuf.OrderIDRequest{OrderId: orderID.OrderId}
+
+	response, err := orderClient.GetOrder(c, grpcRequest)
+	if err != nil {
+		logger.Logger.Errorf("Failed to fetch order details for OrderID=%d: %v", orderID.OrderId, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch order details"})
+		return
+	}
+
+	logger.Logger.Infof("Order fetched successfully: %+v", response)
+	c.JSON(http.StatusOK, gin.H{
+		"order_id":     response.OrderId,
+		"user_id":      response.UserId,
+		"total_amount": response.TotalAmount,
+		"items":        response.Items,
+	})
+}
+
+func TestHandler(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		logger.Logger.Error("User ID not found in context")
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+
+	logger.Logger.Infof("TestHandler called with UserID=%s", userID)
+	ctx.JSON(http.StatusOK, gin.H{"userID": userID})
 }

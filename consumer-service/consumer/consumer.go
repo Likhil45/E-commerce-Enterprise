@@ -2,10 +2,13 @@ package consumer
 
 import (
 	"context"
+	"e-commerce/consumer-service/consmetrics"
 	conshand "e-commerce/consumer-service/handler"
+	"e-commerce/logger"
+	"strconv"
+
 	"e-commerce/protobuf/protobuf"
 	"encoding/json"
-	"log"
 
 	"github.com/IBM/sarama"
 )
@@ -26,27 +29,26 @@ func NewKafkaConsumer(brokers []string, groupID string, topics []string) (*Kafka
 
 	consumer, err := sarama.NewConsumerGroup(brokers, groupID, config)
 	if err != nil {
-		log.Printf("Failed to start Kafka consumer: %v", err)
+		logger.Logger.Errorf("Failed to start Kafka consumer: %v", err)
 		return nil, err
 	}
-
+	logger.Logger.Info("Kafka consumer initialized successfully")
 	return &KafkaConsumerService{consumer: consumer, topics: topics, groupID: groupID, handler: ConsumerGroupHandler{}}, nil
 }
 
-// ProcessMessage processes Kafka messages
 // ProcessMessage listens for messages from Kafka and processes them
 func (c *KafkaConsumerService) ProcessMessage(ctx context.Context) {
-	log.Println("Starting Kafka Consumer...")
+	logger.Logger.Info("Starting Kafka Consumer...")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Kafka consumer stopped")
+			logger.Logger.Info("Kafka consumer stopped")
 			return
 		default:
 			err := c.consumer.Consume(ctx, c.topics, &c.handler)
 			if err != nil {
-				log.Printf("Error consuming Kafka message: %v", err)
+				logger.Logger.Errorf("Error consuming Kafka message: %v", err)
 			}
 		}
 	}
@@ -67,20 +69,21 @@ func (h *ConsumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim processes each Kafka message
 func (h *ConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	log.Println("Inside ConsumeClaim")
+	logger.Logger.Info("Inside ConsumeClaim")
 
 	for {
 		select {
 		case msg, ok := <-claim.Messages():
 			if !ok {
-				log.Println("Message channel closed, stopping processing")
+				logger.Logger.Info("Message channel closed, stopping processing")
 				return nil
 			}
 
-			log.Printf("Received message: Topic=%s, Partition=%d, Offset=%d, Message=%s\n",
+			logger.Logger.Infof("Received message: Topic=%s, Partition=%d, Offset=%d, Message=%s",
 				msg.Topic, msg.Partition, msg.Offset, string(msg.Value))
 
 			// Handle event based on topic
+			status := "success"
 			switch msg.Topic {
 			case "OrderCreated":
 				ProcessOrderCreated(string(msg.Value))
@@ -95,13 +98,17 @@ func (h *ConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cl
 			case "PaymentFailed":
 				PaymentFailed(string(msg.Value))
 			default:
-				log.Printf("Unknown topic: %s", msg.Topic)
+				logger.Logger.Warnf("Unknown topic: %s", msg.Topic)
+				status = "unknown"
 			}
+
+			// Increment Kafka message processed counter
+			consmetrics.KafkaMessagesProcessed.WithLabelValues(msg.Topic, status).Inc()
 
 			// Mark message as processed
 			sess.MarkMessage(msg, "")
 		case <-sess.Context().Done():
-			log.Println("Consumer session canceled")
+			logger.Logger.Info("Consumer session canceled")
 			return nil
 		}
 	}
@@ -109,58 +116,30 @@ func (h *ConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cl
 
 // Order Service Handler
 func ProcessOrderCreated(message string) {
+	logger.Logger.Infof("Received OrderCreated event: %s", message)
 
-	log.Println(message)
-	log.Println("Received OrderCreated event:", message)
-
-	//  Parse the incoming message
+	// Parse the incoming message
 	var order protobuf.OrderResponse
 	err := json.Unmarshal([]byte(message), &order)
 	if err != nil {
-		log.Println("Error parsing OrderCreated event:", err)
+		logger.Logger.Errorf("Error parsing OrderCreated event: %v", err)
 		return
 	}
 
-	//  Validate event data
+	// Validate event data
 	if order.OrderId == 0 || order.UserId == "" || len(order.Items) == 0 {
-		log.Println("Invalid OrderCreated event: missing required fields")
-
+		logger.Logger.Warn("Invalid OrderCreated event: missing required fields")
 		return
 	}
-	// var error1 int32
-	// for _, val := range order.Items {
-
-	// 	inventoryReq := &protobuf.StockUpdateRequest{ProductId: val.ProductId, Quantity: val.Quantity}
-	// 	inventoryResp, err := conshand.CallInventoryService(inventoryReq)
-	// 	if err != nil {
-	// 		log.Println("Inventory processing failed:", err)
-	// 	}
-	// 	if inventoryResp.Status == "Insufficient Stock" || inventoryResp.Status == "Not Found" {
-	// 		error1++
-	// 	}
-
-	// }
-
-	// if error1 == 0 {
 
 	paymentReq := &protobuf.PaymentRequest{OrderId: order.OrderId, Amount: order.TotalAmount, Method: "credit_card", UserId: order.UserId}
 
 	paymentResponse, err := conshand.CallPaymentService(paymentReq)
 	if err != nil {
-		log.Println("Payment processing failed:", err)
+		logger.Logger.Errorf("Payment processing failed: %v", err)
 		return
 	}
-	// notReq := &protobuf.NotificationRequest{UserId: order.GetUserId(), Message: "Your Order is Created"}
-
-	// notResp, err2 := conshand.CallNotificationService(notReq)
-	// if err2 != nil {
-	// 	log.Println("Unable to set Nofication", err2)
-	// 	return
-	// }
-	log.Printf("\nPayment Process Response: %v", paymentResponse)
-	// log.Printf("\nNotification Response: %v", notResp)
-
-	// }
+	logger.Logger.Infof("Payment Process Response: %+v", paymentResponse)
 }
 
 // Inventory Service Handler
@@ -190,54 +169,56 @@ func ProcessInventoryReserved(message string) {
 
 // Not implementing
 func ProcessPaymentProcessed(message string) {
-	log.Println("Processing PaymentProcessed event:", message)
+	logger.Logger.Infoln("Processing PaymentProcessed event:", message)
 	var payment protobuf.PaymentResponse
 	err := json.Unmarshal([]byte(message), &payment)
 	if err != nil {
-		log.Println("unable to Unmarshall the data from paymentprocess event")
+		logger.Logger.Error("unable to Unmarshall the data from paymentprocess event")
 	}
 
 	//Validate with payment status
 	if payment.Status != "SUCCESS" {
-		log.Println("Payment Failed")
+		logger.Logger.Infoln("Payment Failed")
 	}
 	//Order
 	notReq := &protobuf.NotificationRequest{UserId: payment.UserId, Message: "Stock is available"}
 
 	res, err := conshand.CallNotificationService(notReq)
 	if err != nil {
-		log.Println("Failed to call Notifaction Service", err)
+		logger.Logger.Error("Failed to call Notifaction Service", err)
 	}
-	log.Printf("\n Notification Response: %v", res)
+	logger.Logger.Infof("\n Notification Response: %v", res)
 }
 
 // Notification Service Handler
 func ProcessOrderConfirmed(message string) {
-	log.Println("Processing OrderConfirmed event:", message)
+	logger.Logger.Infoln("Processing OrderConfirmed event:", message)
 	var payresp protobuf.PaymentResponse
 
 	err := json.Unmarshal([]byte(message), &payresp)
 	if err != nil {
-		log.Println("Unable to Unamrshal Payment Request")
+		logger.Logger.Error("Unable to Unamrshal Payment Request")
 		return
 	}
-	notReq := &protobuf.NotificationRequest{UserId: payresp.GetUserId(), Message: "Your Order is Confirmed"}
+
+	notReq := &protobuf.NotificationRequest{UserId: payresp.GetUserId(), Message: "Your Order is Confirmed", OrderId: strconv.Itoa(int(payresp.GetOrderId())), PaymentId: strconv.Itoa(int(payresp.PaymentId)), Total: strconv.Itoa(int(payresp.Amount))}
+	logger.Logger.Infof("\nNotification Request: %v", notReq)
 	notResp, err2 := conshand.CallNotificationService(notReq)
 	if err2 != nil {
-		log.Println("Unable to set Nofication", err)
+		logger.Logger.Error("Unable to set Nofication", err)
 		return
 	}
-	log.Printf("\nNotification Response: %v", notResp)
+	logger.Logger.Infof("\nNotification Response: %v", notResp)
 
 }
 
 func ProductOutOfStock(message string) {
-	log.Println("Processing Out of Stock event:", message)
+	logger.Logger.Infoln("Processing Out of Stock event:", message)
 	var prodId uint32
 
 	err := json.Unmarshal([]byte(message), &prodId)
 	if err != nil {
-		log.Println("Unable to Unamrshal OutofStock Request")
+		logger.Logger.Error("Unable to Unamrshal OutofStock Request")
 		return
 	}
 
@@ -245,27 +226,27 @@ func ProductOutOfStock(message string) {
 	notReq := &protobuf.NotificationRequest{UserId: "122", Message: "Your Order is Confirmed"}
 	notResp, err2 := conshand.CallNotificationService(notReq)
 	if err2 != nil {
-		log.Println("Unable to set Nofication", err)
+		logger.Logger.Error("Unable to set Nofication", err)
 		return
 	}
-	log.Printf("\nNotification Response: %v", notResp)
+	logger.Logger.Infof("\nNotification Response: %v", notResp)
 
 }
 func PaymentFailed(message string) {
-	log.Println("Processing Out of Stock event:", message)
+	logger.Logger.Infoln("Processing Out of Stock event:", message)
 	var payresp protobuf.PaymentResponse
 
 	err := json.Unmarshal([]byte(message), &payresp)
 	if err != nil {
-		log.Println("Unable to Unmarshal Payment Failed event")
+		logger.Logger.Infoln("Unable to Unmarshal Payment Failed event")
 		return
 	}
-	notReq := &protobuf.NotificationRequest{UserId: payresp.GetUserId(), Message: "Your Payment Failed!! Please update your payment details and Try again!!!"}
+	notReq := &protobuf.NotificationRequest{UserId: payresp.GetUserId(), Message: "Your Payment Failed!! Please update your payment details here: localhost:8080/update/pd and Try again!!!", OrderId: strconv.Itoa(int(payresp.GetOrderId())), PaymentId: strconv.Itoa(int(payresp.PaymentId)), Total: strconv.Itoa(int(payresp.Amount))}
 	notResp, err2 := conshand.CallNotificationService(notReq)
 	if err2 != nil {
-		log.Println("Unable to set Nofication", err)
+		logger.Logger.Infoln("Unable to set Nofication", err)
 		return
 	}
-	log.Printf("\nNotification Response: %v", notResp)
+	logger.Logger.Infof("\nNotification Response: %v", notResp)
 
 }

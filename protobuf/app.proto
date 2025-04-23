@@ -9,6 +9,8 @@ service UserService {
     rpc AuthenticateUser (AuthenticateUserRequest) returns (AuthResponse);
     rpc GetUser (GetUserRequest) returns (UserResponse);
     rpc GetUserPaymentDetails (GetUserRequest) returns (UserPaymentResponse);
+    rpc AddPaymentDetails (AddPaymentDetailsRequest) returns (AddPaymentDetailsResponse); // New RPC method
+
 }
 
 message RegisterUserRequest {
@@ -49,6 +51,15 @@ message PaymentDetails {
 message UserPaymentResponse {
     bool has_payment_details = 1;
     PaymentDetails payment = 2;
+}
+
+message AddPaymentDetailsRequest {
+    string user_id = 1;
+    PaymentDetails payment_details = 2;
+}
+
+message AddPaymentDetailsResponse {
+    string status = 1; // e.g., "SUCCESS" or "FAILED"
 }
 
 
@@ -178,6 +189,9 @@ service NotificationService {
 message NotificationRequest {
     string user_id = 1;
     string message = 2;
+    string order_id=3;
+    string payment_id=4;
+    string total=5;
 }
 
 message NotificationResponse {
@@ -205,33 +219,43 @@ message LogListResponse {
 
 // Order Tracking & Search Service
 service OrderTrackingService {
-    rpc TrackOrder (OrderTrackingRequest) returns (OrderTrackingResponse);
-    rpc SearchOrders (OrderSearchRequest) returns (OrderSearchResponse);
-}
-
-message OrderTrackingRequest {
-    uint32 order_id = 1;
-}
-
-message OrderTrackingResponse {
-    uint32 order_id = 1;
-    repeated OrderEvent events = 2;
-}
-
-message OrderEvent {
-    string event = 1;
-}
-
-message OrderSearchRequest {
+    // Search orders based on user ID, product ID, date range, and status
+    rpc SearchOrders(SearchOrdersRequest) returns (SearchOrdersResponse);
+  
+    // Get real-time tracking updates for an order
+    rpc GetOrderTracking(OrderTrackingRequest) returns (OrderTrackingResponse);
+  }
+  
+  message SearchOrdersRequest {
     string user_id = 1;
-    uint32 product_id = 2;
+    string product_id = 2;
+    string start_date = 3; // ISO 8601 format
+    string end_date = 4;   // ISO 8601 format
     string status = 5;
-}
+  }
+  
+  message SearchOrdersResponse {
+    repeated Order orders = 1;
+  }
+  
+  message OrderTrackingRequest {
+    string order_id = 1;
+  }
+  
+  message OrderTrackingResponse {
+    string order_id = 1;
+    string status = 2;
+    string estimated_delivery = 3; // ISO 8601 format
+  }
 
-message OrderSearchResponse {
-    repeated OrderTrackingResponse orders = 1;
-}
-
+  message Order {
+    string order_id = 1;
+    string user_id = 2;
+    string product_id = 3;
+    string status = 4;
+    string total_amount = 5;
+    string created_at = 6; // ISO 8601 format
+  }
 //DB
 service DatabaseService {
     rpc GetStock (StockRequest) returns (StockResponse);

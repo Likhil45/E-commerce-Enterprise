@@ -2,105 +2,137 @@ package conshand
 
 import (
 	"context"
-	"log"
-
+	"e-commerce/consumer-service/consmetrics"
+	"e-commerce/logger"
 	"e-commerce/protobuf/protobuf"
 
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"google.golang.org/grpc"
 )
 
 func CallPaymentService(paymentReq *protobuf.PaymentRequest) (*protobuf.PaymentResponse, error) {
-	//  Connect to gRPC Payment Service
-	conn, err := grpc.Dial("payment-service:50080", grpc.WithInsecure())
+	// Connect to gRPC Payment Service
+	logger.Logger.Infof("Connecting to Payment Service for OrderID=%d", paymentReq.OrderId)
+	conn, err := grpc.Dial("payment-service:50080", grpc.WithInsecure(), grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
 	if err != nil {
-		log.Println("Failed to connect to Payment Service:", err)
+		logger.Logger.Errorf("Failed to connect to Payment Service: %v", err)
+		consmetrics.GrpcCallsTotal.WithLabelValues("PaymentService", "ProcessPayment", "failed").Inc()
 		return nil, err
 	}
 	defer conn.Close()
 
-	//  Creating gRPC client
+	// Creating gRPC client
 	client := protobuf.NewPaymentServiceClient(conn)
 
-	//  Calling ProcessPayment RPC
+	// Calling ProcessPayment RPC
+	logger.Logger.Infof("Calling ProcessPayment for OrderID=%d", paymentReq.OrderId)
 	response, err := client.ProcessPayment(context.Background(), paymentReq)
 	if err != nil {
-		log.Println("Error calling ProcessPayment:", err)
+		logger.Logger.Errorf("Error calling ProcessPayment: %v", err)
+		consmetrics.GrpcCallsTotal.WithLabelValues("PaymentService", "ProcessPayment", "failed").Inc()
 		return nil, err
 	}
 
-	connR, err := grpc.Dial("redis-service:50010", grpc.WithInsecure())
+	// Connect to Redis Service
+	logger.Logger.Infof("Connecting to Redis Service for UserID=%s", paymentReq.UserId)
+	connR, err := grpc.Dial("redis-service:50010", grpc.WithInsecure(), grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
 	if err != nil {
-		log.Println("Failed to connect to Redis Service:", err)
+		logger.Logger.Errorf("Failed to connect to Redis Service: %v", err)
+		consmetrics.GrpcCallsTotal.WithLabelValues("RedisService", "SetData", "failed").Inc()
 		return nil, err
 	}
-	defer conn.Close()
+	defer connR.Close()
 	clientR := protobuf.NewRedisServiceClient(connR)
-	// usrStr := strconv.Itoa(int(paymentReq.GetUserId()))
+
+	// Set data in Redis based on payment status
 	var setReq *protobuf.SetRequest
 	if response.Status == "SUCCESS" {
 		setReq = &protobuf.SetRequest{Key: paymentReq.UserId, Value: "Your Order was created Successfully!!!"}
 	} else {
 		setReq = &protobuf.SetRequest{Key: paymentReq.UserId, Value: "Payment Failed!!, Update card details"}
 	}
+	logger.Logger.Infof("Setting data in Redis for UserID=%s, Value=%s", setReq.Key, setReq.Value)
 	resp, err := clientR.SetData(context.Background(), setReq)
 	if err != nil {
-		log.Println("Unable to set data to redis")
+		logger.Logger.Errorf("Failed to set data in Redis: %v", err)
 	}
-	log.Println(resp)
+	consmetrics.GrpcCallsTotal.WithLabelValues("RedisService", "SetData", "success").Inc()
+
+	logger.Logger.Infof("ProcessPayment Response: %+v", response)
+	logger.Logger.Infof("Redis SetData Response: %+v", resp)
 
 	return response, nil
 }
 
-//Call Notification
-
+// CallNotificationService sends notifications via Redis and Notification Service
 func CallNotificationService(not *protobuf.NotificationRequest) (*protobuf.NotificationResponse, error) {
-	connR, err := grpc.Dial("redis-service:50010", grpc.WithInsecure())
+	logger.Logger.Infof("Calling Notification Service for UserID=%s", not.UserId)
+
+	// Connect to Redis Service
+	connR, err := grpc.Dial("redis-service:50010", grpc.WithInsecure(), grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
 	if err != nil {
-		log.Println("unable to dial to port 50010 - Redis service", err)
+		logger.Logger.Errorf("Failed to connect to Redis Service: %v", err)
+		consmetrics.GrpcCallsTotal.WithLabelValues("RedisService", "SetData", "failed").Inc()
 		return nil, err
 	}
 	defer connR.Close()
 	clientR := protobuf.NewRedisServiceClient(connR)
-	// usrId := strconv.Itoa(int(not.UserId))
-	check, err1 := clientR.SetData(context.Background(), &protobuf.SetRequest{Key: not.UserId, Value: not.Message})
-	if err1 != nil {
-		log.Println("Unable to send data to notification service", err1)
-		return nil, err1
-	}
-	log.Println("The response is ", check)
 
-	conn, err := grpc.Dial("notification-service:50020", grpc.WithInsecure())
+	// Set data in Redis
+	logger.Logger.Infof("Setting data in Redis for UserID=%s, Value=%s", not.UserId, not.Message)
+	check, err := clientR.SetData(context.Background(), &protobuf.SetRequest{Key: not.UserId, Value: not.Message})
 	if err != nil {
-		log.Println("unable to dial to port 50020 - Notification service", err)
+		logger.Logger.Errorf("Failed to set data in Redis: %v", err)
+		return nil, err
+	}
+	logger.Logger.Infof("SetData response from Redis: %+v", check)
+
+	// Connect to Notification Service
+	conn, err := grpc.Dial("notification-service:50020", grpc.WithInsecure(), grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
+	if err != nil {
+		logger.Logger.Errorf("Failed to connect to Notification Service: %v", err)
+		consmetrics.GrpcCallsTotal.WithLabelValues("NotificationService", "SendNotification", "failed").Inc()
 		return nil, err
 	}
 	defer conn.Close()
 	client := protobuf.NewNotificationServiceClient(conn)
 
-	response, err1 := client.SendNotification(context.Background(), not)
-	if err1 != nil {
-		log.Println("Unable to send data to notification service", err1)
-		return nil, err1
+	// Send notification
+	logger.Logger.Infof("Sending notification to UserID=%s", not.UserId)
+	response, err := client.SendNotification(context.Background(), not)
+	if err != nil {
+		logger.Logger.Errorf("Failed to send notification: %v", err)
+		return nil, err
 	}
-	return response, nil
+	logger.Logger.Infof("Notification sent successfully: %+v", response)
 
+	return response, nil
 }
 
 func CallInventoryService(req *protobuf.StockUpdateRequest) (*protobuf.StockResponse, error) {
-	conn, err := grpc.Dial("inventory-service:50051", grpc.WithInsecure())
+	logger.Logger.Infof("Calling Inventory Service for ProductID=%d, Quantity=%d", req.ProductId, req.Quantity)
+
+	// Connect to Inventory Service
+	conn, err := grpc.Dial("inventory-service:50051", grpc.WithInsecure(), grpc.WithUnaryInterceptor(grpc_prometheus.UnaryClientInterceptor),
+		grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor))
 	if err != nil {
-		log.Println("unable to dial to port 50051 - Inventory service", err)
+		logger.Logger.Errorf("Failed to connect to Inventory Service: %v", err)
 		return nil, err
 	}
 	defer conn.Close()
 	client := protobuf.NewInventoryServiceClient(conn)
 
-	resp, err1 := client.UpdateStock(context.Background(), req)
-
-	if err1 != nil {
-		log.Println("Unable to send data to Inventory service", err1)
-		return nil, err1
+	// Update stock
+	resp, err := client.UpdateStock(context.Background(), req)
+	if err != nil {
+		logger.Logger.Errorf("Failed to update stock in Inventory Service: %v", err)
+		return nil, err
 	}
-	return resp, nil
+	logger.Logger.Infof("Stock updated successfully in Inventory Service: %+v", resp)
 
+	return resp, nil
 }

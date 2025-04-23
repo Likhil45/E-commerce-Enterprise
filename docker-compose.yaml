@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   postgres:
     hostname: postgres
@@ -25,6 +27,8 @@ services:
       dockerfile: write-db-service/Dockerfile
     ports:
       - "50001:50001"
+      - "8001:8001"
+    restart: unless-stopped
     environment:
       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
       KAFKA_BROKER: "kafka:9092"
@@ -34,6 +38,10 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      vault:
+        condition: service_started
+      # elasticsearch:
+      #   condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 50001"]
       interval: 30s
@@ -56,12 +64,16 @@ services:
       context: . # Set monorepo root as the build context
       dockerfile: producer-service/Dockerfile
     ports:
+      - "8007:8007"
       - "50052:50052"
+    restart: unless-stopped
     environment:
       KAFKA_BROKER: "kafka:9092"
     depends_on:
       kafka:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
     networks:
       - app_network
 
@@ -71,11 +83,14 @@ services:
       dockerfile: product-service/Dockerfile
     ports:
       - "8081:8081"
+    restart: unless-stopped
     environment:
       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
     depends_on:
       postgres:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
     networks:
       - app_network
 
@@ -83,6 +98,9 @@ services:
     build:
       context: . # Set monorepo root as the build context
       dockerfile: consumer-service/Dockerfile
+    ports:
+      - "8017:8017"
+    restart: unless-stopped
     environment:
       KAFKA_BROKER: "kafka:9092"
       KAFKA_GROUP_ID: "ecommerce-consumer-group"
@@ -90,6 +108,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
     networks:
       - app_network
 
@@ -98,7 +118,9 @@ services:
       context: . # Set monorepo root as the build context
       dockerfile: payment-service/Dockerfile
     ports:
+      - "8005:8005"
       - "50080:50080"
+    restart: unless-stopped
     environment:
       KAFKA_BROKER: "kafka:9092"
       PRODUCER_SERVICE: "producer-service:50052"
@@ -106,6 +128,8 @@ services:
       kafka:
         condition: service_healthy
       producer-service:
+        condition: service_started
+      elasticsearch:
         condition: service_started
     networks:
       - app_network
@@ -116,6 +140,7 @@ services:
       dockerfile: gateway/Dockerfile
     ports:
       - "8080:8080"
+    restart: unless-stopped
     environment:
       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
       JWT_SECRET: "your-secret-key"
@@ -130,7 +155,9 @@ services:
       context: . # Set monorepo root as the build context
       dockerfile: inventory-service/Dockerfile
     ports:
+      - "8013:8013"
       - "50051:50051"
+    restart: unless-stopped
     environment:
       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
       KAFKA_BROKER: "kafka:9092"
@@ -138,6 +165,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
       kafka:
         condition: service_healthy
     networks:
@@ -148,17 +177,21 @@ services:
       context: . # Set monorepo root as the build context
       dockerfile: notification-service/Dockerfile
     ports:
+      - "8011:8011"
       - "50020:50020"
+    restart: unless-stopped
     environment:
       REDIS_SERVICE: "redis-service:50010"
     depends_on:
       redis-service:
         condition: service_started
+      elasticsearch:
+        condition: service_started
     networks:
       - app_network
 
   kafka:
-    image: bitnami/kafka:latest
+    image: bitnami/kafka:3.9.0
     environment:
       KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
@@ -191,17 +224,27 @@ services:
     networks:
       - app_network
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    # healthcheck:
+    #   test: ["CMD-SHELL", "redis-cli", "ping"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 5
 
   redis-service:
     build:
-      context: . # Set monorepo root as the build context
+      context: . # Set monorepo root as the build
       dockerfile: redis-service/Dockerfile
     ports:
+      - "8015:8015"
       - "50010:50010"
+    restart: unless-stopped
     environment:
-      REDIS_HOST: "redis:6379"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
     depends_on:
       redis:
+        condition: service_started
+      elasticsearch:
         condition: service_started
     networks:
       - app_network
@@ -212,6 +255,7 @@ services:
       dockerfile: order-service/Dockerfile
     ports:
       - "8083:8083"
+    restart: unless-stopped
     environment:
       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
       KAFKA_BROKER: "kafka:9092"
@@ -224,11 +268,123 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      elasticsearch:
+        condition: service_started
     networks:
       - app_network
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - app_network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000" # Expose Grafana on port 3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin # Default admin username
+      - GF_SECURITY_ADMIN_PASSWORD=password # Default admin password
+    depends_on:
+      - prometheus
+    networks:
+      - app_network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.0
+    ports:
+      - "5544:5544"
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - app_network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    networks:
+      - app_network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "9095:8080" # Exposed to host on port 9095
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - app_network
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.0
+    entrypoint: "filebeat -e -strict.perms=false"
+    container_name: filebeat
+    user: root
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    networks:
+      - app_network
+    depends_on:
+      - elasticsearch
+
+  vault:
+    image: vault:1.13.0
+    container_name: vault
+    ports:
+      - "8200:8200" # Vault UI and API
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "root" # Root token for development mode
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200" # Listen on all interfaces
+    cap_add:
+      - IPC_LOCK # Prevent memory from being swapped to disk
+    networks:
+      - app_network
+    command: "server -dev" # Start Vault in development mode
+
+  # cassandra:
+  #   image: cassandra:4.0
+  #   container_name: cassandra
+  #   ports:
+  #     - "9042:9042"
+  #   environment:
+  #     CASSANDRA_CLUSTER_NAME: "ECommerceCluster"
+  #     CASSANDRA_NUM_TOKENS: 256
+  #     CASSANDRA_START_RPC: "true"
+  #   networks:
+  #     - app_network
+
 volumes:
   postgres-data:
+  prometheus-data:
+  elasticsearch-data:
+  grafana-data:
+  kibana-data:
 
 networks:
   app_network: # Global network definition
