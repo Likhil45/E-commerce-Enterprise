@@ -1,0 +1,41 @@
+name: Build & Push Microservices
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'write-db-service/**'
+      - 'gateway/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set lowercase IMAGE_OWNER
+      id: prep
+      run: echo "IMAGE_OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build & push write-db-service
+      run: |
+        docker build -t ghcr.io/${IMAGE_OWNER_LC}/write-db-service:latest \
+          -f write-db-service/Dockerfile .
+        docker push ghcr.io/${IMAGE_OWNER_LC}/write-db-service:latest
+
+    - name: Build & push gateway
+      run: |
+        docker build -t ghcr.io/${IMAGE_OWNER_LC}/gateway:latest \
+          -f gateway/Dockerfile .
+        docker push ghcr.io/${IMAGE_OWNER_LC}/gateway:latest
