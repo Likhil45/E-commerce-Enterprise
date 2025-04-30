@@ -279,6 +279,12 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alert.rules.yml:/etc/prometheus/alert.rules.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    depends_on:
+      - alertmanager
     networks:
       - app_network
 
@@ -291,6 +297,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=password # Default admin password
     depends_on:
       - prometheus
+    volumes:
+      - grafana-data:/var/lib/grafana # Persist Grafana data
     networks:
       - app_network
 
@@ -366,6 +374,16 @@ services:
     networks:
       - app_network
     command: "server -dev" # Start Vault in development mode
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - app_network
 
   # cassandra:
   #   image: cassandra:4.0

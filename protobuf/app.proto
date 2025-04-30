@@ -131,6 +131,9 @@ service OrderService {
     rpc ListOrders (Empty) returns (OrderListResponse);
     rpc UpdateOrder (OrderRequest) returns (OrderResponse);
     rpc DeleteOrder (OrderIDRequest) returns (Empty);
+    rpc GetOrderByUser (UserIDRequest) returns (OrderListResponse);
+    rpc UpdateOrderStatus (OrderStatusRequest) returns (Empty);
+    rpc GetOrderStatus (OrderIDRequest) returns (OrderResponse);
 }
 
 message OrderRequest {
@@ -139,9 +142,17 @@ message OrderRequest {
     repeated OrderItem items = 3;
     float total_amount = 4;
 }
+message UserIDRequest{
+    string user_id = 1;
+}
+message OrderStatusRequest {
+    uint32 order_id = 1;
+    string status = 2; // e.g., "Pending", "Shipped", "Delivered", "Cancelled"
+}
 
 message OrderIDRequest {
     uint32 order_id = 1;
+    string user_id = 2;
 }
 
 message OrderResponse {

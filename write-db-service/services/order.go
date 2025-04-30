@@ -84,10 +84,10 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *protobuf.OrderReque
 }
 
 func (s *OrderService) GetOrder(ctx context.Context, req *protobuf.OrderIDRequest) (*protobuf.OrderResponse, error) {
-	logger.Logger.Infof("Received GetOrder request: OrderID=%d", req.OrderId)
+	logger.Logger.Infof("Received GetOrder request from : UserID=%s", req.UserId)
 
 	var order models.Order
-	if err := store.DB.Preload("Items").Where("id = ?", req.OrderId).First(&order).Error; err != nil {
+	if err := store.DB.Preload("Items").Where("order_id = ?", req.OrderId).First(&order).Error; err != nil {
 		logger.Logger.Errorf("Failed to fetch order from DB: OrderID=%d, Error=%v", req.OrderId, err)
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (s *OrderService) UpdateOrder(ctx context.Context, req *protobuf.OrderReque
 	logger.Logger.Infof("Received UpdateOrder request: %+v", req)
 
 	var order models.Order
-	if err := store.DB.Where("id = ?", req.OrderId).First(&order).Error; err != nil {
+	if err := store.DB.Where("order_id = ?", req.OrderId).First(&order).Error; err != nil {
 		logger.Logger.Errorf("Failed to fetch order for update: OrderID=%d, Error=%v", req.OrderId, err)
 		return nil, err
 	}
@@ -199,6 +199,67 @@ func (s *OrderService) DeleteOrder(ctx context.Context, req *protobuf.OrderIDReq
 		return nil, err
 	}
 	logger.Logger.Infof("OrderDeleted event published successfully: %+v", kafkaReq)
+
+	return &protobuf.Empty{}, nil
+}
+func (s *OrderService) GetOrdersByUser(ctx context.Context, req *protobuf.UserIDRequest) (*protobuf.OrderListResponse, error) {
+	logger.Logger.Infof("Received GetOrdersByUser request: UserID=%d", req.UserId)
+
+	var orders []models.Order
+	if err := store.DB.Where("user_id = ?", req.UserId).Preload("Items").Find(&orders).Error; err != nil {
+		logger.Logger.Errorf("Failed to fetch orders for user from DB: UserID=%d, Error=%v", req.UserId, err)
+		return nil, err
+	}
+
+	var orderResponses []*protobuf.OrderResponse
+	for _, order := range orders {
+		var items []*protobuf.OrderItem
+		for _, item := range order.OrderItems {
+			items = append(items, &protobuf.OrderItem{
+				ProductId: uint32(item.ProductID),
+				Quantity:  uint32(item.Quantity),
+				Price:     float32(item.Price),
+			})
+		}
+		orderResponses = append(orderResponses, &protobuf.OrderResponse{
+			OrderId:     uint32(order.OrderID),
+			UserId:      order.UserID,
+			Items:       items,
+			TotalAmount: float32(order.TotalPrice),
+		})
+	}
+
+	logger.Logger.Infof("Orders fetched successfully for user: TotalOrders=%d", len(orderResponses))
+	return &protobuf.OrderListResponse{Orders: orderResponses}, nil
+}
+func (s *OrderService) UpdateOrderStatus(ctx context.Context, req *protobuf.OrderStatusRequest) (*protobuf.Empty, error) {
+	logger.Logger.Infof("Received UpdateOrderStatus request: OrderID=%d, Status=%s", req.OrderId, req.Status)
+
+	var order models.Order
+	if err := store.DB.Where("order_id = ?", req.OrderId).First(&order).Error; err != nil {
+		logger.Logger.Errorf("Failed to fetch order for status update: OrderID=%d, Error=%v", req.OrderId, err)
+		return nil, err
+	}
+
+	order.Status = req.Status
+	if err := store.DB.Save(&order).Error; err != nil {
+		logger.Logger.Errorf("Failed to update order status in DB: OrderID=%d, Error=%v", req.OrderId, err)
+		return nil, err
+	}
+
+	// // Publish OrderStatusUpdated event to Kafka
+	// kafkaReq := &protobuf.PublishRequest{
+	// 	Topic:     "Orders",
+	// 	EventType: "OrderStatusUpdated",
+	// 	Message:   fmt.Sprintf("{\"order_id\": %d, \"status\": \"%s\"}", req.OrderId, req.Status),
+	// }
+
+	// _, err := s.KafkaClient.PublishMessage(ctx, kafkaReq)
+	// if err != nil {
+	// 	logger.Logger.Errorf("Failed to publish OrderStatusUpdated event: %v", err)
+	// 	return nil, err
+	// }
+	// logger.Logger.Infof("OrderStatusUpdated event published successfully: %+v", kafkaReq)
 
 	return &protobuf.Empty{}, nil
 }

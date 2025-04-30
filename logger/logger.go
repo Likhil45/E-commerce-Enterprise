@@ -13,6 +13,7 @@ var Logger = logrus.New()
 
 // InitLogger initializes the Logrus logger with an Elasticsearch hook
 func InitLogger(serviceName string) {
+
 	// Elasticsearch URL
 	elasticURL := "http://elasticsearch:9200"
 

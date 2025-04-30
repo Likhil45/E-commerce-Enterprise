@@ -19,6 +19,7 @@ func main() {
 	authorized.Use(middleware.AuthMiddleware())
 	r.GET("/:id", controller.GetUser)
 	authorized.POST("/order/create", controller.CreateOrder)
+	authorized.PUT("/order", controller.GetOrder)
 	authorized.GET("/order", controller.GetOrder)
 	authorized.GET("/test", controller.TestHandler)
 	r.GET("/update/pd", controller.AddPaymentDetails)

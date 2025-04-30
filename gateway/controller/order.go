@@ -14,6 +14,15 @@ import (
 
 func CreateOrder(c *gin.Context) {
 	var req models.Order
+
+	orderID := uuid.New().ID()
+	req.OrderID = orderID
+	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Logger.Errorf("Invalid request payload: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
 	userID, exists := c.Get("userID")
 	if !exists {
 		logger.Logger.Error("Unable to retrieve the userID from JWT token")
@@ -29,15 +38,8 @@ func CreateOrder(c *gin.Context) {
 		return
 	}
 	req.UserID = userIDStr
-
 	logger.Logger.Infof("Creating order for UserID=%s", userIDStr)
-	orderID := uuid.New().ID()
-	req.OrderID = orderID
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Logger.Errorf("Invalid request payload: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
-		return
-	}
+
 	logger.Logger.Infof("Order request payload: %+v", req)
 
 	// Connect to Inventory Service
@@ -147,7 +149,23 @@ func GetOrder(c *gin.Context) {
 	defer conn.Close()
 
 	orderClient := protobuf.NewOrderServiceClient(conn)
-	grpcRequest := &protobuf.OrderIDRequest{OrderId: orderID.OrderId}
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		logger.Logger.Error("Unable to retrieve the userID from JWT token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		return
+	}
+
+	// Convert userID to string
+	userIDStr, ok := userID.(string)
+	if !ok {
+		logger.Logger.Error("Invalid user ID format")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	grpcRequest := &protobuf.OrderIDRequest{OrderId: orderID.OrderId, UserId: userIDStr}
 
 	response, err := orderClient.GetOrder(c, grpcRequest)
 	if err != nil {
@@ -164,7 +182,9 @@ func GetOrder(c *gin.Context) {
 		"items":        response.Items,
 	})
 }
+func GetOrdersbyUser(c *gin.Context) {
 
+}
 func TestHandler(ctx *gin.Context) {
 	userID, exists := ctx.Get("userID")
 	if !exists {

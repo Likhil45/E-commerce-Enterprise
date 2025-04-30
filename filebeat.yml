@@ -8,9 +8,12 @@ filebeat.inputs:
     enabled: true
     paths:
       - /var/lib/docker/containers/*/*.log
+    json.keys_under_root: true
+    json.add_error_key: true
+    json.message_key: msg # Logrus uses `msg` for messages
 
 processors:
   - add_docker_metadata: ~
 
-output.elasticsearch:
-  hosts: ["http://elasticsearch:9200"]
+output.logstash:
+  hosts: ["logstash:5544"]
