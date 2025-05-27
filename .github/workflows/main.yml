@@ -59,7 +59,7 @@ jobs:
     environment: production # Optional: Link to a GitHub environment for deployment protection rules
 
     env:
-      IMAGE_OWNER_LC: ${{ github.repository_owner_lc |lower }}
+      # Keep these here, as they're passed to the step environment
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
@@ -89,6 +89,11 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         script: |
+          # --- FIX FOR IMAGE_OWNER_LC ---
+          # Set IMAGE_OWNER_LC directly in the script using GITHUB_REPOSITORY_OWNER
+          # This variable is always available within the GitHub Actions context.
+          export IMAGE_OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
+
           APP_DIR="/home/${{ secrets.EC2_USER }}/E-commerce-Enterprise"
 
           echo "Navigating to $APP_DIR"
@@ -97,7 +102,6 @@ jobs:
 
           echo "Pulling latest code from GitHub..."
           if [ ! -d ".git" ]; then
-            # FIX: Corrected git clone URL syntax
             git clone https://github.com/${{ github.repository }}.git .
           else
             git pull origin main
@@ -107,7 +111,7 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
           echo "Setting environment variables for docker-compose..."
-          export IMAGE_OWNER_LC="${{ env.IMAGE_OWNER_LC }}"
+          # IMAGE_OWNER_LC is now set above. We export the others here.
           export POSTGRES_USER="${{ env.POSTGRES_USER }}"
           export POSTGRES_PASSWORD="${{ env.POSTGRES_PASSWORD }}"
           export POSTGRES_DB="${{ env.POSTGRES_DB }}"
