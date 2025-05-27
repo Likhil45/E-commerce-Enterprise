@@ -59,7 +59,7 @@ jobs:
     environment: production # Optional: Link to a GitHub environment for deployment protection rules
 
     env:
-      IMAGE_OWNER_LC: ${{ github.repository_owner_lc }}
+      IMAGE_OWNER_LC: ${{ github.repository_owner_lc |lower }}
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
