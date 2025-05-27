@@ -1,3 +1,418 @@
+# for local
+
+# version: "3.8"
+
+# services:
+#   postgres:
+#     hostname: postgres
+#     image: postgres:13-alpine
+#     restart: unless-stopped
+#     environment:
+#       POSTGRES_USER: user
+#       POSTGRES_PASSWORD: password
+#       POSTGRES_DB: ecom
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres-data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U user -d ecom"]
+#       interval: 5s
+#       timeout: 5s
+#       retries: 5
+#     networks:
+#       - app_network
+
+#   write-db-service:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: write-db-service/Dockerfile
+#     ports:
+#       - "50001:50001"
+#       - "8001:8001"
+#     restart: unless-stopped
+#     environment:
+#       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+#       KAFKA_BROKER: "kafka:9092"
+#       APP_ENV: "production"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       kafka:
+#         condition: service_healthy
+#       vault:
+#         condition: service_started
+#       # elasticsearch:
+#       #   condition: service_healthy
+#     healthcheck:
+#       test: ["CMD-SHELL", "nc -z localhost 50001"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - app_network
+
+#   zookeeper:
+#     image: bitnami/zookeeper:latest
+#     environment:
+#       ALLOW_ANONYMOUS_LOGIN: "yes"
+#     ports:
+#       - "2181:2181"
+#     networks:
+#       - app_network
+
+#   producer-service:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: producer-service/Dockerfile
+#     ports:
+#       - "8007:8007"
+#       - "50052:50052"
+#     restart: unless-stopped
+#     environment:
+#       KAFKA_BROKER: "kafka:9092"
+#     depends_on:
+#       kafka:
+#         condition: service_healthy
+#       elasticsearch:
+#         condition: service_started
+#     networks:
+#       - app_network
+
+#   product-service:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: product-service/Dockerfile
+#     ports:
+#       - "8081:8081"
+#     restart: unless-stopped
+#     environment:
+#       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       elasticsearch:
+#         condition: service_started
+#     networks:
+#       - app_network
+
+#   consumer-service:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: consumer-service/Dockerfile
+#     ports:
+#       - "8017:8017"
+#     restart: unless-stopped
+#     environment:
+#       KAFKA_BROKER: "kafka:9092"
+#       KAFKA_GROUP_ID: "ecommerce-consumer-group"
+#       KAFKA_TOPICS: "OrderCreated,InventoryReserved,PaymentProcessed,OrderConfirmed"
+#     depends_on:
+#       kafka:
+#         condition: service_healthy
+#       elasticsearch:
+#         condition: service_started
+#     networks:
+#       - app_network
+
+#   payment-service:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: payment-service/Dockerfile
+#     ports:
+#       - "8005:8005"
+#       - "50080:50080"
+#     restart: unless-stopped
+#     environment:
+#       KAFKA_BROKER: "kafka:9092"
+#       PRODUCER_SERVICE: "producer-service:50052"
+#     depends_on:
+#       kafka:
+#         condition: service_healthy
+#       producer-service:
+#         condition: service_started
+#       elasticsearch:
+#         condition: service_started
+#     networks:
+#       - app_network
+
+#   gateway:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: gateway/Dockerfile
+#     ports:
+#       - "8080:8080"
+#     restart: unless-stopped
+#     environment:
+#       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+#       JWT_SECRET: "your-secret-key"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#     networks:
+#       - app_network
+
+#   inventory-service:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: inventory-service/Dockerfile
+#     ports:
+#       - "8013:8013"
+#       - "50051:50051"
+#     restart: unless-stopped
+#     environment:
+#       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+#       KAFKA_BROKER: "kafka:9092"
+#       APP_ENV: "production"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       elasticsearch:
+#         condition: service_started
+#       kafka:
+#         condition: service_healthy
+#     networks:
+#       - app_network
+
+#   notification-service:
+#     build:
+#       context: . # Set monorepo root as the build context
+#       dockerfile: notification-service/Dockerfile
+#     ports:
+#       - "8011:8011"
+#       - "50020:50020"
+#     restart: unless-stopped
+#     environment:
+#       REDIS_SERVICE: "redis-service:50010"
+#     depends_on:
+#       redis-service:
+#         condition: service_started
+#       elasticsearch:
+#         condition: service_started
+#     networks:
+#       - app_network
+
+#   kafka:
+#     image: bitnami/kafka:3.9.0
+#     environment:
+#       KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+#       KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
+#       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+#       KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+#     ports:
+#       - "9092:9092"
+#     depends_on:
+#       - zookeeper
+#     networks:
+#       - app_network
+#     healthcheck:
+#       test:
+#         [
+#           "CMD",
+#           "kafka-topics.sh",
+#           "--list",
+#           "--bootstrap-server",
+#           "localhost:9092",
+#         ]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   redis:
+#     image: redis:7-alpine
+#     restart: unless-stopped
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - app_network
+#     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+#     # healthcheck:
+#     #   test: ["CMD-SHELL", "redis-cli", "ping"]
+#     #   interval: 5s
+#     #   timeout: 5s
+#     #   retries: 5
+
+#   redis-service:
+#     build:
+#       context: . # Set monorepo root as the build
+#       dockerfile: redis-service/Dockerfile
+#     ports:
+#       - "8015:8015"
+#       - "50010:50010"
+#     restart: unless-stopped
+#     environment:
+#       REDIS_HOST: "redis"
+#       REDIS_PORT: "6379"
+#     depends_on:
+#       redis:
+#         condition: service_started
+#       elasticsearch:
+#         condition: service_started
+#     networks:
+#       - app_network
+
+#   order-service:
+#     build:
+#       context: . # Use the repository root as the build context
+#       dockerfile: order-service/Dockerfile
+#     ports:
+#       - "8083:8083"
+#     restart: unless-stopped
+#     environment:
+#       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
+#       KAFKA_BROKER: "kafka:9092"
+#       REDIS_HOST: "redis:6379"
+#       APP_ENV: "production"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       kafka:
+#         condition: service_healthy
+#       redis:
+#         condition: service_started
+#       elasticsearch:
+#         condition: service_started
+#     networks:
+#       - app_network
+
+#   prometheus:
+#     image: prom/prometheus:latest
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#       - ./alert.rules.yml:/etc/prometheus/alert.rules.yml
+#     command:
+#       - "--config.file=/etc/prometheus/prometheus.yml"
+#       - "--web.enable-lifecycle"
+#     depends_on:
+#       - alertmanager
+#     networks:
+#       - app_network
+
+#   grafana:
+#     image: grafana/grafana:latest
+#     ports:
+#       - "3000:3000" # Expose Grafana on port 3000
+#     environment:
+#       - GF_SECURITY_ADMIN_USER=admin # Default admin username
+#       - GF_SECURITY_ADMIN_PASSWORD=password # Default admin password
+#     depends_on:
+#       - prometheus
+#     volumes:
+#       - grafana-data:/var/lib/grafana # Persist Grafana data
+#     networks:
+#       - app_network
+
+#   elasticsearch:
+#     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+#     environment:
+#       - discovery.type=single-node
+#     ports:
+#       - "9200:9200"
+#     healthcheck:
+#       test: ["CMD-SHELL", "curl -f http://localhost:9200 || exit 1"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#     networks:
+#       - app_network
+
+#   logstash:
+#     image: docker.elastic.co/logstash/logstash:7.17.0
+#     ports:
+#       - "5544:5544"
+#     volumes:
+#       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+#     networks:
+#       - app_network
+
+#   kibana:
+#     image: docker.elastic.co/kibana/kibana:7.17.0
+#     ports:
+#       - "5601:5601"
+#     environment:
+#       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+#     networks:
+#       - app_network
+
+#   cadvisor:
+#     image: gcr.io/cadvisor/cadvisor:latest
+#     container_name: cadvisor
+#     ports:
+#       - "9095:8080" # Exposed to host on port 9095
+#     volumes:
+#       - /:/rootfs:ro
+#       - /var/run:/var/run:ro
+#       - /sys:/sys:ro
+#       - /var/lib/docker/:/var/lib/docker:ro
+#     networks:
+#       - app_network
+
+#   filebeat:
+#     image: docker.elastic.co/beats/filebeat:8.13.0
+#     entrypoint: "filebeat -e -strict.perms=false"
+#     container_name: filebeat
+#     user: root
+#     volumes:
+#       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+#       - /var/run/docker.sock:/var/run/docker.sock:ro
+#       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+#     networks:
+#       - app_network
+#     depends_on:
+#       - elasticsearch
+
+#   vault:
+#     image: vault:1.13.0
+#     container_name: vault
+#     ports:
+#       - "8200:8200" # Vault UI and API
+#     environment:
+#       VAULT_DEV_ROOT_TOKEN_ID: "root" # Root token for development mode
+#       VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200" # Listen on all interfaces
+#     cap_add:
+#       - IPC_LOCK # Prevent memory from being swapped to disk
+#     networks:
+#       - app_network
+#     command: "server -dev" # Start Vault in development mode
+
+#   alertmanager:
+#     image: prom/alertmanager:latest
+#     container_name: alertmanager
+#     ports:
+#       - "9093:9093"
+#     volumes:
+#       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+#     networks:
+#       - app_network
+
+#   # cassandra:
+#   #   image: cassandra:4.0
+#   #   container_name: cassandra
+#   #   ports:
+#   #     - "9042:9042"
+#   #   environment:
+#   #     CASSANDRA_CLUSTER_NAME: "ECommerceCluster"
+#   #     CASSANDRA_NUM_TOKENS: 256
+#   #     CASSANDRA_START_RPC: "true"
+#   #   networks:
+#   #     - app_network
+
+# volumes:
+#   postgres-data:
+#   prometheus-data:
+#   elasticsearch-data:
+#   grafana-data:
+#   kibana-data:
+
+# networks:
+#   app_network: # Global network definition
+#     driver: bridge
+#     # driver_opts:
+#     #   com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+
+#for aws
 version: "3.8"
 
 services:
@@ -10,7 +425,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: ecom
     ports:
-      - "5432:5432"
+      - "5432:5432" # Consider if this needs to be exposed to the internet. Usually not.
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -21,10 +436,9 @@ services:
     networks:
       - app_network
 
+  # --- Your custom services - CHANGE 'build' to 'image' ---
   write-db-service:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: write-db-service/Dockerfile
+    image: ghcr.io/likhil45/write-db-service:latest # Changed from build
     ports:
       - "50001:50001"
       - "8001:8001"
@@ -40,10 +454,8 @@ services:
         condition: service_healthy
       vault:
         condition: service_started
-      # elasticsearch:
-      #   condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 50001"]
+      test: ["CMD-SHELL", "nc -z localhost 50001"] # Make sure nc is installed in your Docker image
       interval: 30s
       timeout: 10s
       retries: 3
@@ -55,14 +467,12 @@ services:
     environment:
       ALLOW_ANONYMOUS_LOGIN: "yes"
     ports:
-      - "2181:2181"
+      - "2181:2181" # Consider if this needs to be exposed to the internet. Usually not.
     networks:
       - app_network
 
   producer-service:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: producer-service/Dockerfile
+    image: ghcr.io/likhil45/producer-service:latest # Changed from build
     ports:
       - "8007:8007"
       - "50052:50052"
@@ -78,9 +488,7 @@ services:
       - app_network
 
   product-service:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: product-service/Dockerfile
+    image: ghcr.io/likhil45/product-service:latest # Changed from build
     ports:
       - "8081:8081"
     restart: unless-stopped
@@ -95,9 +503,7 @@ services:
       - app_network
 
   consumer-service:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: consumer-service/Dockerfile
+    image: ghcr.io/likhil45/consumer-service:latest # Changed from build
     ports:
       - "8017:8017"
     restart: unless-stopped
@@ -114,9 +520,7 @@ services:
       - app_network
 
   payment-service:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: payment-service/Dockerfile
+    image: ghcr.io/likhil45/payment-service:latest # Changed from build
     ports:
       - "8005:8005"
       - "50080:50080"
@@ -135,15 +539,13 @@ services:
       - app_network
 
   gateway:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: gateway/Dockerfile
+    image: ghcr.io/likhil45/gateway:latest # Changed from build
     ports:
-      - "8080:8080"
+      - "8080:8080" # This is your main application access port, ensure EC2 SG allows 8080
     restart: unless-stopped
     environment:
       DATABASE_URL: "user=user password=password dbname=ecom host=postgres port=5432 sslmode=disable"
-      JWT_SECRET: "your-secret-key"
+      JWT_SECRET: "your-secret-key" # CHANGE THIS FOR PRODUCTION! Use secrets management.
     depends_on:
       postgres:
         condition: service_healthy
@@ -151,9 +553,7 @@ services:
       - app_network
 
   inventory-service:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: inventory-service/Dockerfile
+    image: ghcr.io/likhil45/inventory-service:latest # Changed from build
     ports:
       - "8013:8013"
       - "50051:50051"
@@ -173,9 +573,7 @@ services:
       - app_network
 
   notification-service:
-    build:
-      context: . # Set monorepo root as the build context
-      dockerfile: notification-service/Dockerfile
+    image: ghcr.io/likhil45/notification-service:latest # Changed from build
     ports:
       - "8011:8011"
       - "50020:50020"
@@ -198,7 +596,7 @@ services:
       KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
     ports:
-      - "9092:9092"
+      - "9092:9092" # Consider if this needs to be exposed to the internet. Usually not.
     depends_on:
       - zookeeper
     networks:
@@ -220,20 +618,13 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6379:6379" # Consider if this needs to be exposed to the internet. Usually not.
     networks:
       - app_network
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
-    # healthcheck:
-    #   test: ["CMD-SHELL", "redis-cli", "ping"]
-    #   interval: 5s
-    #   timeout: 5s
-    #   retries: 5
 
   redis-service:
-    build:
-      context: . # Set monorepo root as the build
-      dockerfile: redis-service/Dockerfile
+    image: ghcr.io/likhil45/redis-service:latest # Changed from build
     ports:
       - "8015:8015"
       - "50010:50010"
@@ -250,9 +641,7 @@ services:
       - app_network
 
   order-service:
-    build:
-      context: . # Use the repository root as the build context
-      dockerfile: order-service/Dockerfile
+    image: ghcr.io/likhil45/order-service:latest # Changed from build
     ports:
       - "8083:8083"
     restart: unless-stopped
@@ -276,10 +665,11 @@ services:
   prometheus:
     image: prom/prometheus:latest
     ports:
-      - "9090:9090"
+      - "9090:9090" # Expose for Prometheus UI access
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./alert.rules.yml:/etc/prometheus/alert.rules.yml
+      # Ensure you have these files in your repo root alongside docker-compose.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.enable-lifecycle"
@@ -291,14 +681,14 @@ services:
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3000:3000" # Expose Grafana on port 3000
+      - "3000:3000" # Expose Grafana on port 3000 for UI access
     environment:
-      - GF_SECURITY_ADMIN_USER=admin # Default admin username
-      - GF_SECURITY_ADMIN_PASSWORD=password # Default admin password
+      - GF_SECURITY_ADMIN_USER=admin # CHANGE FOR PRODUCTION
+      - GF_SECURITY_ADMIN_PASSWORD=password # CHANGE FOR PRODUCTION
     depends_on:
       - prometheus
     volumes:
-      - grafana-data:/var/lib/grafana # Persist Grafana data
+      - grafana-data:/var/lib/grafana
     networks:
       - app_network
 
@@ -306,8 +696,9 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
     environment:
       - discovery.type=single-node
+      # Add environment variables for JVM heap size if needed, e.g., ES_JAVA_OPTS: -Xms512m -Xmx512m
     ports:
-      - "9200:9200"
+      - "9200:9200" # Expose for Elasticsearch API access (consider security)
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9200 || exit 1"]
       interval: 10s
@@ -319,16 +710,16 @@ services:
   logstash:
     image: docker.elastic.co/logstash/logstash:7.17.0
     ports:
-      - "5544:5544"
+      - "5544:5544" # Logstash input port, ensure security group allows if external clients send logs here
     volumes:
-      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf # Ensure this file exists
     networks:
       - app_network
 
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.0
     ports:
-      - "5601:5601"
+      - "5601:5601" # Expose for Kibana UI access
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     networks:
@@ -338,12 +729,13 @@ services:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     ports:
-      - "9095:8080" # Exposed to host on port 9095
+      - "9095:8080" # Exposed to host on port 9095 for cAdvisor UI
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
+      - /var/lib/docker/:/var/lib/docker:ro # This is critical for cAdvisor to monitor Docker
+      - /dev/disk/:/dev/disk:ro # Often needed for disk metrics
     networks:
       - app_network
 
@@ -353,9 +745,11 @@ services:
     container_name: filebeat
     user: root
     volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      # Ensure these paths exist on your EC2 instance for Filebeat to read logs
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro # Docker container logs
+      - /var/log:/var/log:ro # General system logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro # For auto-discovering containers
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro # Ensure this file exists
     networks:
       - app_network
     depends_on:
@@ -365,47 +759,33 @@ services:
     image: vault:1.13.0
     container_name: vault
     ports:
-      - "8200:8200" # Vault UI and API
+      - "8200:8200" # Expose Vault UI and API (Be very careful with this in production)
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: "root" # Root token for development mode
-      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200" # Listen on all interfaces
+      VAULT_DEV_ROOT_TOKEN_ID: "root" # Insecure for prod, CHANGE THIS!
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
     cap_add:
-      - IPC_LOCK # Prevent memory from being swapped to disk
+      - IPC_LOCK
     networks:
       - app_network
-    command: "server -dev" # Start Vault in development mode
+    command: "server -dev"
 
   alertmanager:
     image: prom/alertmanager:latest
     container_name: alertmanager
     ports:
-      - "9093:9093"
+      - "9093:9093" # Expose for Alertmanager UI
     volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml # Ensure this file exists
     networks:
       - app_network
-
-  # cassandra:
-  #   image: cassandra:4.0
-  #   container_name: cassandra
-  #   ports:
-  #     - "9042:9042"
-  #   environment:
-  #     CASSANDRA_CLUSTER_NAME: "ECommerceCluster"
-  #     CASSANDRA_NUM_TOKENS: 256
-  #     CASSANDRA_START_RPC: "true"
-  #   networks:
-  #     - app_network
 
 volumes:
   postgres-data:
   prometheus-data:
-  elasticsearch-data:
+  elasticsearch-data: # Consider using bind mounts for persistent data, especially for ES
   grafana-data:
   kibana-data:
 
 networks:
-  app_network: # Global network definition
+  app_network:
     driver: bridge
-    # driver_opts:
-    #   com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"

@@ -203,11 +203,11 @@ func (s *OrderService) DeleteOrder(ctx context.Context, req *protobuf.OrderIDReq
 	return &protobuf.Empty{}, nil
 }
 func (s *OrderService) GetOrdersByUser(ctx context.Context, req *protobuf.UserIDRequest) (*protobuf.OrderListResponse, error) {
-	logger.Logger.Infof("Received GetOrdersByUser request: UserID=%d", req.UserId)
+	logger.Logger.Infof("Received GetOrdersByUser request: UserID=%s", req.UserId)
 
 	var orders []models.Order
 	if err := store.DB.Where("user_id = ?", req.UserId).Preload("Items").Find(&orders).Error; err != nil {
-		logger.Logger.Errorf("Failed to fetch orders for user from DB: UserID=%d, Error=%v", req.UserId, err)
+		logger.Logger.Errorf("Failed to fetch orders for user from DB: UserID=%s, Error=%v", req.UserId, err)
 		return nil, err
 	}
 
