@@ -1,0 +1,156 @@
+name: Build & Push Microservices and Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Trigger workflow if any service's Dockerfile or code changes
+      - '**/Dockerfile'
+      - '**/go.mod' # Assuming Go services, adjust if other languages
+      - '**/go.sum'
+      - '**/*.go'
+      # Also trigger if the workflow file or docker-compose.yml changes
+      - '.github/workflows/**'
+      - 'docker-compose.yml'
+      # Add other service directories to paths if they don't contain Dockerfiles in their root
+      # e.g., if you have a shared library that affects multiple services
+      # - 'shared-library/**'
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions UI
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    # Use a matrix strategy to build and push all your microservices
+    strategy:
+      matrix:
+        service:
+          - write-db-service
+          - producer-service
+          - product-service
+          - consumer-service
+          - payment-service
+          - gateway
+          - inventory-service
+          - notification-service
+          - redis-service
+          - order-service
+          # Add any other services from your docker-compose.yml that have their own Dockerfiles
+          # e.g., if you had a separate 'frontend-service' with its own Dockerfile
+          # - frontend-service
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set lowercase IMAGE_OWNER
+      id: prep
+      run: echo "IMAGE_OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build & Push ${{ matrix.service }}
+      run: |
+        # Build the Docker image for the current service in the matrix
+        # The -f flag specifies the Dockerfile path relative to the context (which is the repo root here)
+        docker build -t $REGISTRY/${IMAGE_OWNER_LC}/${{ matrix.service }}:latest \
+          -f ${{ matrix.service }}/Dockerfile .
+        # Push the built image to GitHub Container Registry
+        docker push $REGISTRY/${IMAGE_OWNER_LC}/${{ matrix.service }}:latest
+
+  deploy:
+    # This job will only run after all services have been successfully built and pushed
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production # Optional: Link to a GitHub environment for deployment protection rules
+
+    # Pass environment variables needed by docker-compose on the EC2 instance
+    # IMPORTANT: Store these as GitHub Secrets and replace the example values
+    env:
+      IMAGE_OWNER_LC: ${{ github.repository_owner_lc }} # Automatically set from the repo owner
+      # Example sensitive variables for your services (add all that are needed by your docker-compose.yml)
+      # These should be configured as secrets in your GitHub repository
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      # ... add other sensitive environment variables for your services (e.g., Cloudinary, SMTP)
+      # For Grafana admin credentials:
+      GF_SECURITY_ADMIN_USER: ${{ secrets.GRAFANA_ADMIN_USER }}
+      GF_SECURITY_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+      # For Vault (if you move away from dev mode):
+      # VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        script: |
+          # Define the application directory on EC2
+          APP_DIR="/home/${{ secrets.EC2_USER }}/E-commerce-Enterprise"
+
+          echo "Navigating to $APP_DIR"
+          mkdir -p $APP_DIR # Ensure the directory exists
+          cd $APP_DIR
+
+          echo "Pulling latest code from GitHub..."
+          # Check if the repository is already cloned. If not, clone it.
+          # Otherwise, pull the latest changes to get the updated docker-compose.yml and config files.
+          if [ ! -d ".git" ]; then
+            git clone [https://github.com/$](https://github.com/$){{ github.repository }}.git .
+          else
+            git pull origin main
+          fi
+
+          echo "Logging into GHCR on EC2 instance..."
+          # Log in to GitHub Container Registry on the EC2 instance
+          # This uses the GITHUB_TOKEN passed from the GitHub Actions environment
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          echo "Setting environment variables for docker-compose..."
+          # Set the IMAGE_OWNER_LC environment variable for docker-compose
+          # This ensures docker-compose uses the correct image paths
+          export IMAGE_OWNER_LC="${{ env.IMAGE_OWNER_LC }}"
+
+          # Export other sensitive environment variables from GitHub Actions secrets
+          # These will be available to your services via docker-compose's environment section
+          export POSTGRES_USER="${{ env.POSTGRES_USER }}"
+          export POSTGRES_PASSWORD="${{ env.POSTGRES_PASSWORD }}"
+          export POSTGRES_DB="${{ env.POSTGRES_DB }}"
+          export JWT_SECRET="${{ env.JWT_SECRET }}"
+          export STRIPE_SECRET_KEY="${{ env.STRIPE_SECRET_KEY }}"
+          # ... export other sensitive env vars as needed
+
+          # For Grafana:
+          export GF_SECURITY_ADMIN_USER="${{ env.GRAFANA_ADMIN_USER }}"
+          export GF_SECURITY_ADMIN_PASSWORD="${{ env.GRAFANA_ADMIN_PASSWORD }}"
+
+          echo "Stopping and removing existing Docker containers..."
+          # Stop and remove existing containers gracefully. The '|| true' prevents failure if no containers are running.
+          docker-compose down || true
+
+          echo "Pulling latest Docker images..."
+          # Pull the latest images from GHCR
+          docker-compose pull
+
+          echo "Starting Docker containers with docker-compose..."
+          # Start all services in detached mode (-d)
+          # --remove-orphans: Removes containers for services no longer defined in the compose file
+          # --force-recreate: Forces recreation of containers, ensuring new images are used
+          docker-compose up -d --remove-orphans --force-recreate
+
+          echo "Deployment complete!"
